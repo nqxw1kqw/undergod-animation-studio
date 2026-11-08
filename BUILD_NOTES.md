@@ -163,3 +163,10 @@ soft-image decoding/alpha, filesystem permissions, notices and Windows BMP
 viewing remain statically verified only. Temporary hand-declared DxLib stubs
 check C++ syntax, not SDK signatures. No Windows build or runtime test was run.
 All 19 portable RESULT groups pass, including every pre-existing test.
+
+Round 5 A: structural_insert_delete_duplicate_minimum_and_cue_repair and
+structural_save_reload_roundtrip cover frame copies, deletion, last-frame refusal,
+unused clip suffixes, cue repair, and full document save/reload equality.
+Structural input and notices follow existing DxLib patterns and are statically
+reviewed only; Windows key definitions, interactive behavior and actual SDK
+compilation remain unverified. No game repository files were modified.

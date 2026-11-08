@@ -31,6 +31,9 @@ size_t NudgeStep(undergod::Timeline&,size_t,double);
 bool SaveCinematic(Library&,std::string& error,const std::string& root=".");
 size_t NudgeCue(Clip&,size_t index,double delta);
 void EditFrameDuration(Clip&,size_t index,double delta);
+size_t InsertFrame(Clip&,size_t index);
+bool DeleteFrame(Clip&,size_t index);
+std::string DuplicateClip(Library&,const std::string& actor,const std::string& id);
 bool SaveClips(Library&,std::string& error,const std::string& root=".");
 // Missing impact cues default to the attacking clip's end.
 double ImpactTime(const Clip&);

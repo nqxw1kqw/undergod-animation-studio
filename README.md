@@ -295,3 +295,12 @@ Decode/write failures display a persistent error; an interrupted or failed expor
 may leave partial output, so check the success notice before using the files.
 The in-app export path and DxLib adapter are statically verified only on this
 host; Windows runtime verification is still required.
+
+Round 5 structural editing: in the clip panel, Ins or N duplicates the selected
+frame immediately after itself, copying its file and duration. Del removes it;
+the last frame cannot be removed. Ctrl+D copies the current clip in the same
+actor as `<id>_copy`, then `_copy2`, `_copy3`, etc. and selects the copy.
+Structural edits pause playback and reset time to zero. Like duration edits,
+they proportionally retime tracks, preserve loop endpoints, and clamp cue start
+times to the new clip end without changing cue duration or tie order. Ctrl+S
+uses the same transactional catalog validation; failed saves leave disk untouched.

@@ -311,13 +311,16 @@ struct Studio {
    auto& c=lib.actors.at(actor).at(clip);size_t count=c.frames.size()+c.cues.size();selectedRow=std::min(selectedRow,count-1);
    if(press(KEY_INPUT_UP))selectedRow=(selectedRow+count-1)%count;
    if(press(KEY_INPUT_DOWN))selectedRow=(selectedRow+1)%count;
+   if(ctrl&&press(KEY_INPUT_D)){clip=DuplicateClip(lib,actor,clip);selectedRow=0;time=0;playing=false;}
+   else if(selectedRow<c.frames.size()&&(press(KEY_INPUT_INSERT)||press(KEY_INPUT_N))){selectedRow=InsertFrame(c,selectedRow);playing=false;time=0;}
+   else if(selectedRow<c.frames.size()&&press(KEY_INPUT_DELETE)){playing=false;if(!DeleteFrame(c,selectedRow)){notice="Cannot delete the last frame";noticeLeft=3;}selectedRow=std::min(selectedRow,c.frames.size()-1);time=0;}
    if(selectedRow>=c.frames.size()&&(press(KEY_INPUT_LBRACKET)||press(KEY_INPUT_RBRACKET))){playing=false;selectedRow=c.frames.size()+NudgeCue(c,selectedRow-c.frames.size(),(press(KEY_INPUT_LBRACKET)?-1:1)*(shift?50.:10.));}
    if(selectedRow<c.frames.size()&&(press(KEY_INPUT_COMMA)||press(KEY_INPUT_PERIOD))){playing=false;EditFrameDuration(c,selectedRow,press(KEY_INPUT_COMMA)?-10:10);time=std::min(time,Duration());}
   }
   if((!ctrl&&press(KEY_INPUT_S))||button({24,664,160,36}))effects.shake=!effects.shake;
   if(press(KEY_INPUT_F)||button({194,664,160,36}))effects.flash=!effects.flash;
   if(press(KEY_INPUT_V)||button({364,664,180,36}))effects.particles=!effects.particles;
-  if(press(KEY_INPUT_D)||button({554,664,150,36}))effects.dim=!effects.dim;
+  if((!ctrl&&press(KEY_INPUT_D))||button({554,664,150,36}))effects.dim=!effects.dim;
   if((shift&&press(KEY_INPUT_E))||button({714,664,245,36}))effects.reduced=!effects.reduced;
   if(!shift&&press(KEY_INPUT_E))Export();
   if(held&&Rect{48,725,W-96,40}.Has(mx,my)){playing=false;time=Duration()*std::clamp(double(mx-48)/(W-96),0.,1.);if(loop&&time==Duration())time-=.001;}

@@ -125,6 +125,26 @@ void EditFrameDuration(Clip& c,size_t index,double delta){
     for(auto& track:c.tracks)for(auto& key:track.second)key.t=key.t==before?after:key.t*(after/before);
     for(auto& cue:c.cues)cue.t=std::clamp(cue.t,0.,after);
 }
+namespace {
+void RepairLength(Clip& c,double before){
+    const double after=c.Duration();
+    for(auto& track:c.tracks)for(auto& key:track.second)key.t=key.t==before?after:key.t*(after/before);
+    for(auto& cue:c.cues)cue.t=std::clamp(cue.t,0.,after);
+}
+}
+size_t InsertFrame(Clip& c,size_t index){
+    const auto frame=c.frames.at(index);const double before=c.Duration();
+    c.frames.insert(c.frames.begin()+index+1,frame);RepairLength(c,before);return index+1;
+}
+bool DeleteFrame(Clip& c,size_t index){
+    c.frames.at(index);if(c.frames.size()==1)return false;
+    const double before=c.Duration();c.frames.erase(c.frames.begin()+index);RepairLength(c,before);return true;
+}
+std::string DuplicateClip(Library& lib,const std::string& actor,const std::string& id){
+    auto& clips=lib.actors.at(actor);auto copy=clips.at(id);const auto base=id+"_copy";auto name=base;
+    for(size_t suffix=2;clips.count(name);++suffix)name=base+std::to_string(suffix);
+    copy.id=name;clips.emplace(name,std::move(copy));return name;
+}
 bool SaveClips(Library& current,std::string& error,const std::string& root){
     const auto target=std::filesystem::path(root)/"data/clips.json";
     const auto temp=std::filesystem::path(root)/"data/clips.json.tmp";

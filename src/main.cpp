@@ -3,6 +3,7 @@
 #endif
 #include <DxLib.h>
 #include "animator.hpp"
+#include "export.hpp"
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -39,6 +40,29 @@ struct Images {
  }
  int Get(const std::string& file,bool gray=false)const{const auto& pair=handles.at(file);return gray?pair.second:pair.first;}
 };
+// Decode only at the app boundary; composition and encoding stay portable.
+ExportImage DecodeExportFrame(const std::string& file){
+ struct SoftImage {int handle;~SoftImage(){if(handle>=0)DeleteSoftImage(handle);}} image{LoadSoftImage(file.c_str())};
+ if(image.handle<0)throw std::runtime_error("Cannot decode export frame: "+file);
+ ExportImage result;
+ if(GetSoftImageSize(image.handle,&result.width,&result.height)<0||result.width<=0||result.height<=0)
+  throw std::runtime_error("Cannot read export frame size: "+file);
+ result.rgba.resize(static_cast<size_t>(result.width)*result.height*4);
+ for(int y=0;y<result.height;++y)for(int x=0;x<result.width;++x){
+  int r=0,g=0,b=0,a=0;
+  if(GetPixelSoftImage(image.handle,x,y,&r,&g,&b,&a)<0)throw std::runtime_error("Cannot read export pixels: "+file);
+  const size_t i=(static_cast<size_t>(y)*result.width+x)*4;
+  result.rgba[i]=static_cast<unsigned char>(r);result.rgba[i+1]=static_cast<unsigned char>(g);
+  result.rgba[i+2]=static_cast<unsigned char>(b);result.rgba[i+3]=static_cast<unsigned char>(a);
+ }
+ return result;
+}
+std::string ExportComponent(const std::string& id){
+ std::string out;constexpr char hex[]="0123456789ABCDEF";
+ for(unsigned char c:id){if((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='-')out+=static_cast<char>(c);
+  else{out+='%';out+=hex[c>>4];out+=hex[c&15];}}
+ return out.empty()?"empty":out;
+}
 struct Effects {bool shake=true,flash=true,particles=true,dim=true,reduced=false;};
 struct Studio {
  Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",target="frog",clip="idle",notice;
@@ -55,6 +79,18 @@ struct Studio {
    if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";
    time=0;notice="Reloaded clips + cinematic";noticeLeft=3;
   }catch(const std::exception& e){notice=std::string("Reload failed (previous data kept): ")+e.what();noticeLeft=0;}
+ }
+ void Export(){
+  try{
+   const std::string name=Cinematic()?SampleCinematic(lib,LocalTime(),actor,target).playerClip:clip;
+   const auto& primary=lib.actors.at(actor).at(name);
+   const auto dir=std::filesystem::path("exports")/(ExportComponent(actor)+"_"+ExportComponent(name));
+   std::filesystem::create_directories(dir);
+   const auto trace=dir/"trace.json",sheet=dir/"sheet.bmp",sidecar=dir/"sheet.json";
+   ExportTrace(primary,trace.string());
+   ExportContactSheet(primary,DecodeExportFrame,sheet.string(),sidecar.string());
+   notice="Exported: "+trace.generic_string()+"\n"+sheet.generic_string()+"\n"+sidecar.generic_string();noticeLeft=10;
+  }catch(const std::exception& e){notice=std::string("Export failed (some files may have been written): ")+e.what();noticeLeft=0;}
  }
  void Init(){
   lib=LoadLibrary();images.Load(lib);stage=MakeScreen(W,360,TRUE);sprite=MakeScreen(512,512,TRUE);
@@ -188,7 +224,7 @@ struct Studio {
  }
  void Draw(){
   ClearDrawScreen();DrawBox(0,0,W,H,C(250,248,239),TRUE);
-  Text(24,18,"UNDERGOD / ANIMATION STUDIO v1");Text(750,18,"A primary | T target | X preview exchange | R reload");
+  Text(24,18,"UNDERGOD / ANIMATION STUDIO v1");Text(750,18,"A primary | T target | X exchange | E export | R reload");
   Button({24,58,150,36},"Chick [1]",actor=="chick");Button({184,58,150,36},"Frog [2]",actor=="frog");
   Button({354,58,260,36},"Target [T]: "+target);Button({624,58,230,36},"Preview exchange [X]");
   auto names=Clips();for(size_t i=0;i<names.size();++i)Button({24+int(i%9)*155,110+int(i/9)*42,145,36},names[i],clip==names[i]);
@@ -199,7 +235,7 @@ struct Studio {
   Button({514,612,100,36},"- [PgDn]");Button({624,612,100,36},"+ [PgUp]");Text(740,621,Fixed(speed)+"x");
   Button({850,612,145,36},"< frame [Left]");Button({1005,612,155,36},"frame > [Right]");
   const Rect toggles[]={{24,664,160,36},{194,664,160,36},{364,664,180,36},{554,664,150,36},{714,664,245,36}};
-  Button(toggles[0],"Shake [S]",effects.shake);Button(toggles[1],"Flash [F]",effects.flash);Button(toggles[2],"Particles [V]",effects.particles);Button(toggles[3],"Dim [D]",effects.dim);Button(toggles[4],"Reduced effects [E]",effects.reduced);
+  Button(toggles[0],"Shake [S]",effects.shake);Button(toggles[1],"Flash [F]",effects.flash);Button(toggles[2],"Particles [V]",effects.particles);Button(toggles[3],"Dim [D]",effects.dim);Button(toggles[4],"Reduced [Shift+E]",effects.reduced);
   Text(24,708,std::string("Backdrop [B]: ")+(backdrop==0?"arena":backdrop==1?"dark":"checkerboard")+" | Guides [G]: "+(guides?"on":"off"));
   const double impact=Cinematic()?ImpactTime(lib.cinematic):ImpactTime(Current());
   const double u=std::clamp(LocalTime()/Duration(),0.,1.);DrawBox(48,740,W-48,750,C(207,217,200),TRUE);DrawBox(48,740,48+int((W-96)*u),750,C(79,106,91),TRUE);DrawCircle(48+int((W-96)*u),745,8,C(79,106,91),TRUE);
@@ -227,7 +263,17 @@ struct Studio {
   }else for(const auto& a:ActiveCues())cueText+=a.cue->action+" ";
   Text(24,803,"Active cues: "+(cueText.empty()?"none":cueText));
   Text(24,832,"Drag to scrub | J: restart/pause | L: faster/resume | P: loop/once | End: last | K: skip | Esc: exit");
-  if(!notice.empty())Text(24,864,notice.substr(0,145),notice.find("failed")!=std::string::npos?C(180,65,70):C(70,120,80));
+  if(!notice.empty()){
+   // Multi-line notices temporarily cover the editor beneath them.
+   size_t lineCount=0;std::istringstream measure(notice);std::string measured;
+   while(std::getline(measure,measured))lineCount+=std::max(size_t(1),(measured.size()+119)/120);
+   DrawBox(20,860,W-20,std::min(H-12,864+int(std::min(lineCount,size_t(12)))*24),C(250,248,239),TRUE);
+   std::istringstream lines(notice);std::string line;int y=864;
+   while(std::getline(lines,line)&&y<H-24){
+    for(size_t offset=0;offset<line.size()&&y<H-24;offset+=120,y+=24)
+     Text(24,y,line.substr(offset,120),notice.find("failed")!=std::string::npos?C(180,65,70):C(70,120,80));
+   }
+  }
  }
  void Input(const char* keys,const char* previous,int mx,int my,bool clicked,bool held){
   auto press=[&](int k){return keys[k]&&!previous[k];};
@@ -272,7 +318,8 @@ struct Studio {
   if(press(KEY_INPUT_F)||button({194,664,160,36}))effects.flash=!effects.flash;
   if(press(KEY_INPUT_V)||button({364,664,180,36}))effects.particles=!effects.particles;
   if(press(KEY_INPUT_D)||button({554,664,150,36}))effects.dim=!effects.dim;
-  if(press(KEY_INPUT_E)||button({714,664,245,36}))effects.reduced=!effects.reduced;
+  if((shift&&press(KEY_INPUT_E))||button({714,664,245,36}))effects.reduced=!effects.reduced;
+  if(!shift&&press(KEY_INPUT_E))Export();
   if(held&&Rect{48,725,W-96,40}.Has(mx,my)){playing=false;time=Duration()*std::clamp(double(mx-48)/(W-96),0.,1.);if(loop&&time==Duration())time-=.001;}
   if(press(KEY_INPUT_B))backdrop=(backdrop+1)%3;
   if(press(KEY_INPUT_G))guides=!guides;

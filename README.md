@@ -80,7 +80,8 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 | End | Pause at final pose (just before wrap when looping) |
 | K | Skip a skippable cinematic to its clean end |
 | S / F / V / D | Toggle shake / flash / particles / dim |
-| E | Toggle reduced effects master |
+| E | Export primary clip trace, BMP sheet and JSON sidecar |
+| Shift+E | Toggle reduced effects master |
 | R | Reload both clip and cinematic data and images; restart time at zero on success |
 | Up / Down | Select a frame or cue row in the timeline panel (scrolls with selection) |
 | [ / ] | Nudge selected cue −/+10 ms; Shift uses 50 ms |
@@ -277,3 +278,20 @@ Sheets are uncompressed 32-bit BGRA BMPs with a BITMAPV4HEADER, explicit alpha
 mask and sRGB color space. The JSON sidecar gives clip/actor identity, frame
 count, cell and sheet sizes, grid rows/columns, and each source frame's top-left
 pixel rectangle and duration in milliseconds. All artifacts use format version 1.
+
+Press **E** to export the selected clip (including unsaved in-memory edits) to
+`exports/<actor>_<clip>/trace.json`, `sheet.bmp`, and `sheet.json` beside the
+executable. Folders are created as needed; repeated exports replace these files.
+The notice lists all three relative paths for ten seconds. IDs with punctuation
+are percent-encoded in directory names. During an X exchange, export uses the
+primary actor's attack clip, independently of the target's reaction. During Sao
+Roi it exports the primary actor's currently sampled sprite clip (including the
+idle fallback), rather than the shared scene. E leaves playback running.
+Shift+E or the Reduced button toggles reduced effects.
+
+The app decodes source PNGs through DxLib's soft-image API, then calls the
+portable sheet writer. BMP is always produced; no optional PNG export is added.
+Decode/write failures display a persistent error; an interrupted or failed export
+may leave partial output, so check the success notice before using the files.
+The in-app export path and DxLib adapter are statically verified only on this
+host; Windows runtime verification is still required.

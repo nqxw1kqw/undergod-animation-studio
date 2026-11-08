@@ -152,3 +152,14 @@ V4 BMP fields/size, channel order, orientation, alpha, exact rectangle coverage,
 unused transparent cells and error reporting. PNG decoding is a caller-supplied
 adapter; composition and BMP/JSON writing are entirely portable without new
 third-party dependencies. No Windows or DxLib code enters the export engine.
+
+
+Round 4 B: E exports the primary clip to executable-relative exports/ with folder
+creation and a three-path notice; Shift+E retains reduced effects. X exchanges
+export the primary clip; Sao Roi exports the currently sampled primary sprite
+clip. The DxLib soft-image decoder uses RAII cleanup and passes RGBA8 pixels to
+the portable engine. No optional PNG output was added. App input, source PNG
+soft-image decoding/alpha, filesystem permissions, notices and Windows BMP
+viewing remain statically verified only. Temporary hand-declared DxLib stubs
+check C++ syntax, not SDK signatures. No Windows build or runtime test was run.
+All 19 portable RESULT groups pass, including every pre-existing test.

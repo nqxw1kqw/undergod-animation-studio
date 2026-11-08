@@ -112,7 +112,7 @@ struct Studio {
  void World(){
   const double at=LocalTime();CinematicPose cinematic;std::vector<Active> active=ActiveCues();
   double dim=0,zoom=1,shake=0,flash=0;
-  if(Cinematic()){cinematic=SampleCinematic(lib,at);dim=cinematic.dim;zoom=cinematic.zoom;shake=cinematic.shake;flash=cinematic.flash;}
+  if(Cinematic()){cinematic=SampleCinematic(lib,at,actor,target);dim=cinematic.dim;zoom=cinematic.zoom;shake=cinematic.shake;flash=cinematic.flash;}
   else for(const auto& a:active){const auto& q=*a.cue;
    if(q.action=="dim")dim=q.value;
    if(q.action=="zoom"){double u=std::clamp(a.age/q.duration,0.,1.);zoom=1+(q.value-1)*(1-(1-u)*(1-u));}
@@ -136,7 +136,7 @@ struct Studio {
   if(Cinematic()||clip=="attack"||clip=="ult_charge"||clip=="ult_throw")Actor(target,reaction.clip,SamplePose(lib.actors.at(target).at(reaction.clip),reaction.local,lib.actors.at(target).at(reaction.clip).loop),1120);
   else Actor(target,"idle",SamplePose(lib.actors.at(target).at("idle"),time,true),1120);
   Blend(dim);DrawBox(0,0,W,360,C(33,28,60),TRUE);Blend();
-  if(Cinematic())Actor(actor,lib.actors.at(actor).count(cinematic.playerClip)?cinematic.playerClip:"idle",SamplePose(lib.actors.at(actor).at(lib.actors.at(actor).count(cinematic.playerClip)?cinematic.playerClip:"idle"),at-250,false),320);
+  if(Cinematic())Actor(actor,cinematic.playerClip,cinematic.player,320);
   else{
    auto pose=SamplePose(Current(),time,loop);const double home=320;
    if(onion){const auto neighbors=NeighborFrames(Current(),pose.frame,loop);auto ghost=pose;
@@ -150,7 +150,7 @@ struct Studio {
    if(cinematic.vfxAge>=0&&cinematic.vfxAge<cinematic.vfxFrames*125){int f=std::min(cinematic.vfxFrames-1,int(cinematic.vfxAge/125));DrawRectRotaGraph3F(cinematic.vfxEnemy?1120.f:320.f,195,(f%2)*256,(f/2)*256,256,256,128,128,1,1,0,images.Get("assets/pastel/vfx/spear_impact.png"),TRUE);}
    // The game's impact produces damage feedback in addition to the VFX sheet.
    for(const auto& s:lib.cinematic.steps)if(s.cue==undergod::Cue::Impact&&at>=s.t&&at<s.t+400)Particles(1120,at-s.t,400,10,false);
-  }else for(const auto& a:active){const auto& q=*a.cue;double x=actor=="chick"?320:1120;
+  }else for(const auto& a:active){const auto& q=*a.cue;double x=320;
    if(q.action=="particles")Particles(x,a.age,q.duration,int(q.value),clip=="defeat");
    if(q.action=="popup"){Blend(1-a.age/q.duration);Text(int(x-35),int(140-a.age*.07),q.text,C(172,85,106));Blend();}
   }
@@ -170,7 +170,7 @@ struct Studio {
    const auto& steps=lib.cinematic.steps;selectedRow=std::min(selectedRow,steps.size()-1);size_t first=selectedRow>=6?selectedRow-5:0;
    for(size_t row=first;row<std::min(steps.size(),first+7);++row){const auto& q=steps[row];int y=936+int(row-first)*30;
     if(row==selectedRow)DrawBox(20,y-2,W-20,y+26,C(220,229,211),TRUE);
-    Text(24,y,(row==selectedRow?"> ":"  ")+Fixed(q.t,1)+" ms "+CueName(q.cue)+" value="+Fixed(q.value)+" duration="+Fixed(q.duration)+" target="+(q.enemy?"enemy":"player")+" pose="+q.pose+(q.falling?" fall":""));
+    Text(24,y,(row==selectedRow?"> ":"  ")+Fixed(q.t,1)+" ms "+CueName(q.cue)+" value="+Fixed(q.value)+" duration="+Fixed(q.duration)+" target="+(q.enemy?"enemy":"player")+" pose="+q.pose+(q.cue==undergod::Cue::Spear?(q.falling?" fall":" rise")+std::string(" from=")+Fixed(q.from_x,0)+","+Fixed(q.from_y,0)+" to="+Fixed(q.to_x,0)+","+Fixed(q.to_y,0):""));
    }return;
   }
   if(Cinematic()){Text(24,936,"Tab: cinematic editor; choose an actor clip to edit frames/cues");return;}
@@ -195,15 +195,17 @@ struct Studio {
   Text(24,176,Cinematic()?"Sao Roi / shared two-actor cinematic":actor+" / "+clip+(Current().composed?" / composed from existing frames":""));
   World();Timeline();Text(1000,672,onion?"Onion [O]: on":"Onion [O]: off");
   Button({24,612,150,36},playing?"Pause [Space]":"Play [Space]",playing);
-  Button({184,612,160,36},"Restart [Home]");Button({354,612,150,36},"Loop [L]",loop);
+  Button({184,612,160,36},"Restart [Home]");Button({354,612,150,36},loop?"Loop [P]":"Once [P]",loop);
   Button({514,612,100,36},"- [PgDn]");Button({624,612,100,36},"+ [PgUp]");Text(740,621,Fixed(speed)+"x");
   Button({850,612,145,36},"< frame [Left]");Button({1005,612,155,36},"frame > [Right]");
   const Rect toggles[]={{24,664,160,36},{194,664,160,36},{364,664,180,36},{554,664,150,36},{714,664,245,36}};
-  Button(toggles[0],"Shake [S]",effects.shake);Button(toggles[1],"Flash [F]",effects.flash);Button(toggles[2],"Particles [P]",effects.particles);Button(toggles[3],"Dim [D]",effects.dim);Button(toggles[4],"Reduced effects [E]",effects.reduced);
+  Button(toggles[0],"Shake [S]",effects.shake);Button(toggles[1],"Flash [F]",effects.flash);Button(toggles[2],"Particles [V]",effects.particles);Button(toggles[3],"Dim [D]",effects.dim);Button(toggles[4],"Reduced effects [E]",effects.reduced);
   Text(24,708,std::string("Backdrop [B]: ")+(backdrop==0?"arena":backdrop==1?"dark":"checkerboard")+" | Guides [G]: "+(guides?"on":"off"));
+  const double impact=Cinematic()?ImpactTime(lib.cinematic):ImpactTime(Current());
   const double u=std::clamp(LocalTime()/Duration(),0.,1.);DrawBox(48,740,W-48,750,C(207,217,200),TRUE);DrawBox(48,740,48+int((W-96)*u),750,C(79,106,91),TRUE);DrawCircle(48+int((W-96)*u),745,8,C(79,106,91),TRUE);
-  size_t frame=Cinematic()?SampleCinematic(lib,LocalTime()).player.frame:SamplePose(Current(),time,loop).frame;
-  const size_t lastFrame=Cinematic()?lib.actors.at("chick").at(SampleCinematic(lib,LocalTime()).playerClip).frames.size()-1:Current().frames.size()-1;
+  int impactX=48+int((W-96)*impact/Duration());DrawLine(impactX,730,impactX,760,C(190,85,80),2);Text(impactX-25,708,"impact");
+  size_t frame=Cinematic()?SampleCinematic(lib,LocalTime(),actor,target).player.frame:SamplePose(Current(),time,loop).frame;
+  const size_t lastFrame=Cinematic()?lib.actors.at(actor).at(SampleCinematic(lib,LocalTime(),actor,target).playerClip).frames.size()-1:Current().frames.size()-1;
   Text(24,774,"Time "+Fixed(LocalTime()/1000,3)+" / "+Fixed(Duration()/1000,3)+" s   |   frame "+std::to_string(frame)+" / "+std::to_string(lastFrame)+"   |   "+(playing?"playing":"paused"));
   std::string cueText;
   if(Cinematic()){
@@ -224,7 +226,7 @@ struct Studio {
    }
   }else for(const auto& a:ActiveCues())cueText+=a.cue->action+" ";
   Text(24,803,"Active cues: "+(cueText.empty()?"none":cueText));
-  Text(24,832,"Drag timeline to scrub | Shift+Left/Right: 50 ms | End: last pose | K: skip cinematic | Esc: exit");
+  Text(24,832,"Drag to scrub | J: restart/pause | L: faster/resume | P: loop/once | End: last | K: skip | Esc: exit");
   if(!notice.empty())Text(24,864,notice.substr(0,145),notice.find("failed")!=std::string::npos?C(180,65,70):C(70,120,80));
  }
  void Input(const char* keys,const char* previous,int mx,int my,bool clicked,bool held){
@@ -241,8 +243,10 @@ struct Studio {
   if(press(KEY_INPUT_TAB)){cinematicPanel=!cinematicPanel;selectedRow=0;}
   for(size_t i=0;i<names.size();++i)if(button({24+int(i%9)*155,110+int(i/9)*42,145,36}))Select(actor,names[i]);
   if(press(KEY_INPUT_SPACE)||button({24,612,150,36})){if(!playing&&!loop&&time>=Duration())time=0;playing=!playing;}
+  if(press(KEY_INPUT_J)){time=0;playing=false;}
+  if(press(KEY_INPUT_L)){speed=NextSpeed(speed);playing=true;}
   if(press(KEY_INPUT_HOME)||button({184,612,160,36}))time=0;
-  if(press(KEY_INPUT_L)||button({354,612,150,36})){time=LocalTime();loop=!loop;}
+  if(press(KEY_INPUT_P)||button({354,612,150,36})){time=LocalTime();loop=!loop;}
   if(press(KEY_INPUT_PGDN)||button({514,612,100,36}))speed=std::max(.25,speed-.25);
   if(press(KEY_INPUT_PGUP)||button({624,612,100,36}))speed=std::min(3.,speed+.25);
   bool shift=keys[KEY_INPUT_LSHIFT]||keys[KEY_INPUT_RSHIFT];
@@ -266,7 +270,7 @@ struct Studio {
   }
   if((!ctrl&&press(KEY_INPUT_S))||button({24,664,160,36}))effects.shake=!effects.shake;
   if(press(KEY_INPUT_F)||button({194,664,160,36}))effects.flash=!effects.flash;
-  if(press(KEY_INPUT_P)||button({364,664,180,36}))effects.particles=!effects.particles;
+  if(press(KEY_INPUT_V)||button({364,664,180,36}))effects.particles=!effects.particles;
   if(press(KEY_INPUT_D)||button({554,664,150,36}))effects.dim=!effects.dim;
   if(press(KEY_INPUT_E)||button({714,664,245,36}))effects.reduced=!effects.reduced;
   if(held&&Rect{48,725,W-96,40}.Has(mx,my)){playing=false;time=Duration()*std::clamp(double(mx-48)/(W-96),0.,1.);if(loop&&time==Duration())time-=.001;}
@@ -301,8 +305,10 @@ int WINAPI WinMain(HINSTANCE,HINSTANCE,LPSTR args,int){
     int mx=int(static_cast<long long>(mouse.x)*W/std::max(1L,client.right)),my=int(static_cast<long long>(mouse.y)*H/std::max(1L,client.bottom));
     int buttons=GetMouseInput();app.Input(keys,previous,mx,my,(buttons&MOUSE_INPUT_LEFT)&&!(oldMouse&MOUSE_INPUT_LEFT),(buttons&MOUSE_INPUT_LEFT)!=0);oldMouse=buttons;
     std::copy(keys,keys+256,previous);
-    if(app.playing){app.time+=dt*1000*app.speed;if(app.exchange&&app.time>=ExchangeDuration(app.lib,app.actor,app.target,app.clip)){app.Select(app.actor,"idle");}
-    else if(!app.loop&&app.time>=app.Duration()&&!app.exchange){app.time=app.Duration();app.playing=false;}}
+    if(app.playing){const double end=app.exchange?ExchangeDuration(app.lib,app.actor,app.target,app.clip):app.Duration();
+     app.playing=AdvanceTransport(app.time,dt*1000*app.speed,end,app.loop);
+     if(app.exchange&&!app.playing)app.Select(app.actor,"idle");
+    }
     if(app.noticeLeft>0){app.noticeLeft-=dt;if(app.noticeLeft<=0)app.notice.clear();}
     app.Draw();ScreenFlip();int wait=16-int((GetNowHiPerformanceCount()-start)/1000);if(wait>0)WaitTimer(wait);
    }

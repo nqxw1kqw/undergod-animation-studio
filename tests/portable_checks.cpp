@@ -163,5 +163,10 @@ int main(){try{
   Check(!SaveCinematic(bad,error,tmp.path.string())&&!error.empty(),"Invalid cinematic save refused");Check(bytes(tmp.path/"data/cinematic.json")==cb,"Cinematic failure byte preservation");
  }
  Result("cinematic_invalid_save_preserves_file_bytes");
+ double transport=0;Check(!AdvanceTransport(transport,5000,650,false)&&transport==650,"Once clamps and stops on last pose");
+ Check(SamplePose(lib.actors.at("chick").at("attack"),transport,false).frame==3,"Once last frame");
+ transport=0;Check(AdvanceTransport(transport,2000,650,true)&&transport==2000,"Loop retains cycle time");
+ Check(NextSpeed(1)==1.25&&NextSpeed(3)==3&&NextSpeed(.25)==.5,"Shuttle speed steps and cap");
+ Result("transport_once_freeze_loop_and_shuttle");
  return 0;
  }catch(const std::exception& e){std::cerr<<"RESULT portable FAIL: "<<e.what()<<'\n';return 1;}}

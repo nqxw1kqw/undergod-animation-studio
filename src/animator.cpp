@@ -168,6 +168,11 @@ double ExchangeDuration(const Library& lib,const std::string& primary,const std:
     const auto& c=lib.actors.at(primary).at(clip);const auto& t=lib.actors.at(target);
     return std::max(c.Duration(),ImpactTime(c)+(t.count("hit")?t.at("hit").Duration():0));
 }
+double NextSpeed(double speed){return std::clamp((std::floor(speed*4)+1)/4,.25,3.);}
+bool AdvanceTransport(double& time,double delta,double duration,bool loop){
+    Require(std::isfinite(delta)&&delta>=0&&duration>0,"Invalid transport advance");
+    time+=delta;if(!loop&&time>=duration){time=duration;return false;}return true;
+}
 FrameNeighbors NeighborFrames(const Clip& c,size_t current,bool loop){
     Require(current<c.frames.size(),"Invalid current frame");const size_t last=c.frames.size()-1;
     return {current>0?current-1:(loop?last:0),current<last?current+1:(loop?0:last)};
@@ -191,7 +196,7 @@ Sample SampleInterval(const Clip& c,double previous,double ms,bool loop){
 }
 Sample Player::Advance(const Clip& c,double ms,bool loop){auto s=SampleInterval(c,previous_,ms,loop);previous_=ms;return s;}
 double CinematicDuration(const undergod::Timeline& t){double end=0;for(const auto& s:t.steps)end=std::max(end,double(s.t));return end;}
-CinematicPose SampleCinematic(const Library& lib,double ms){
+CinematicPose SampleCinematic(const Library& lib,double ms,const std::string& primary,const std::string& target){
     using undergod::Cue;CinematicPose p;double playerStart=0,enemyStart=0;
     double zoomStart=1,zoomTarget=1,zoomTime=0,zoomDuration=0;
     double spearTime=0,spearDuration=1,fx=0,fy=0,tx=0,ty=0;
@@ -214,7 +219,9 @@ CinematicPose SampleCinematic(const Library& lib,double ms){
     },[&]{p.impacted=true;},[&]{p.ended=true;p.dim=0;p.spearVisible=false;p.vfxAge=-1;p.shake=p.flash=0;zoomStart=zoomTarget=1;p.playerClip=p.enemyClip="idle";playerStart=enemyStart=ms;});
     player.Advance(float(std::max(0.,ms)));p.zoom=zoom(ms);
     double u=std::clamp((ms-spearTime)/spearDuration,0.,1.);u=p.falling?u*u:1-(1-u)*(1-u);p.spearX=fx+(tx-fx)*u;p.spearY=fy+(ty-fy)*u;
-    const auto& pc=lib.actors.at("chick").at(p.playerClip);const auto& ec=lib.actors.at("frog").at(p.enemyClip);
+    if(!lib.actors.at(primary).count(p.playerClip))p.playerClip="idle";
+    if(!lib.actors.at(target).count(p.enemyClip))p.enemyClip="idle";
+    const auto& pc=lib.actors.at(primary).at(p.playerClip);const auto& ec=lib.actors.at(target).at(p.enemyClip);
     p.player=SamplePose(pc,ms-playerStart,pc.loop);p.enemy=SamplePose(ec,ms-enemyStart,ec.loop);
     return p;
 }

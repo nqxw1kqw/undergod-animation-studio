@@ -90,7 +90,7 @@ and were statically syntax checked with the same temporary stubs.
 Source: sibling `~/projects/undergod-card/UndergodCard`, game repository revision
 `2a70e0277527e02768afc7431b4356966961d858` at inspection.
 
-- `include/quest_timeline.hpp` is copied unchanged. It supplies stable chronological
+- `include/quest_timeline.hpp` retains the copied cursor; round 3 adds parser/serializer declarations. It supplies stable chronological
   dispatch and exactly-once impact/end callbacks, including skipped cinematics.
 - `src/cinematic_data.cpp` extracts `LoadTimeline` from `src/quest_data.cpp`, with
   its action names, fields, target/phase/sheet checks and spear-contact constraint.
@@ -132,3 +132,12 @@ Round 3 B adds RESULT groups `cinematic_nudge_clamp_selection`,
 selection through stable sorting, all serialized step fields, contact/end/range/
 nonfinite rejection and destination preservation. Cinematic step panel, Tab,
 Ctrl+S notices and Windows atomic replacement remain statically verified only.
+
+Round 3 C: `transport_once_freeze_loop_and_shuttle` tests nonlooping large-delta
+clamp/stop, final sprite, retained loop cycle time, speed increments and cap.
+Impact marker positioning uses the same portable ImpactTime API as choreography.
+J/L/P/V input, marker appearance, final-pose display and all dual-stage/cinematic
+interaction remain Windows-only. The current source passes a MinGW C++17 syntax
+check with temporary hand-declared DxLib stubs (including new key constants);
+this does not validate actual SDK signatures or key definitions. The portable
+engine remains DxLib-free. No Windows build, rendering or smoke run was performed.

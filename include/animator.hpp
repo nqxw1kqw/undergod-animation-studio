@@ -38,6 +38,8 @@ double ImpactTime(const undergod::Timeline&);
 struct Reaction {std::string clip="idle";double local=0;};
 Reaction TargetReaction(const Library&,const std::string& target,double time,double impact,bool defeat=false);
 double ExchangeDuration(const Library&,const std::string& primary,const std::string& target,const std::string& clip);
+double NextSpeed(double speed);
+bool AdvanceTransport(double& time,double delta,double duration,bool loop);
 struct FrameNeighbors {size_t previous=0,next=0;};
 FrameNeighbors NeighborFrames(const Clip&,size_t current,bool loop);
 Pose SamplePose(const Clip&,double ms,bool loop);
@@ -57,6 +59,6 @@ struct CinematicPose {
     int vfxFrames=4; bool vfxEnemy=true,spearVisible=false,falling=false,ended=false,impacted=false;
     double spearX=0,spearY=0;
 };
-CinematicPose SampleCinematic(const Library&,double ms);
+CinematicPose SampleCinematic(const Library&,double ms,const std::string& primary="chick",const std::string& target="frog");
 double CinematicDuration(const undergod::Timeline&);
 }

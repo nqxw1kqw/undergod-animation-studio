@@ -15,8 +15,8 @@ verification limits and provenance.
 Every frame clip has four existing PNGs. Defeat uses the actor's four hit frames
 with fade, tilt, grayscale, darkening, and dust. Victory uses its four idle frames
 with the game's survivor bounce sampled into keys. No new character art is used.
-The cinematic always features chick as player and frog as enemy, regardless of
-which actor picker was selected; it is not a frog ult_throw clip.
+The cinematic uses the primary and target pickers; a missing primary pose falls
+back to idle (frog has no ult_throw).
 
 The import contains 44 character frames, two 512×512 VFX images, four 256×256 card
 images, STYLE.md, and five unchanged game data JSONs. `data/clips.json` is the new
@@ -62,7 +62,7 @@ Windows; capture success alone does not prove visual correctness.
 ## Controls
 
 Buttons provide the same actions as the keyboard. The stage uses the game's
-1440×360 arena, 0.5 actor scale, foot pivot, and mirrored frog.
+1440×360 arena, 0.5 actor scale, foot pivot, and side-based facing.
 
 | Input | Action |
 | --- | --- |
@@ -71,14 +71,15 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 | Tab | Switch timeline panel between current clip and cinematic; choose clips with buttons |
 | Space | Play / pause; playing again from a finished nonlooping clip restarts it |
 | Home | Restart at zero, retaining play/pause state |
-| L | Toggle looping, retaining local time |
+| J / L | Restart and pause / resume at next speed step (maximum 3×) |
+| P | Toggle loop / play once and freeze on the last frame, retaining local time |
 | Page Down / Page Up | Decrease / increase speed by 0.25, clamped to 0.25×–3× |
 | Left / Right | Pause and step to previous / next frame boundary |
 | Shift + Left / Right | Pause and scrub by 50 ms |
 | Drag timeline | Pause and scrub to an absolute local time |
 | End | Pause at final pose (just before wrap when looping) |
 | K | Skip a skippable cinematic to its clean end |
-| S / F / P / D | Toggle shake / flash / particles / dim |
+| S / F / V / D | Toggle shake / flash / particles / dim |
 | E | Toggle reduced effects master |
 | R | Reload both clip and cinematic data and images; restart time at zero on success |
 | Up / Down | Select a frame or cue row in the timeline panel (scrolls with selection) |
@@ -200,6 +201,7 @@ optional. Supported actions and values:
 | popup | Display amount metadata; `text` supplies the displayed string, rising at 70 px/s |
 | dim | Overlay opacity held for duration (normally 0–1) |
 | zoom | Target camera multiplier, easing out from 1 during duration |
+| impact | Choreography contact marker; duration/value use the standard cue fields |
 
 Cue times must be in [0, clip length], including an editable end-boundary cue. Cues may outlive a clip; they remain visible
 while paused at its end, and looping can overlap a previous cycle's cue. Keep
@@ -234,9 +236,8 @@ without applying gameplay damage.
    reusing frames with a new treatment. Each actor should have an `idle` clip;
    retain chick/frog and any clip referenced by the cinematic.
 3. Rebuild to copy repo changes, or edit the runtime copy; press R. A cycles to
-   newly added actors, and Tab/the clip buttons enumerate their clips. Additional
-   actors use the player-side pivot/scale; frog alone uses enemy mirroring. The
-   imported sao_roi scene remains specifically chick/frog.
+   newly added actors, and the clip buttons enumerate their clips. T cycles the target picker.
+   Actors use the existing foot pivot/scale and face toward the opposing side.
 4. Run portable checks. Their delivered-inventory assertions intentionally pin
    the 15 v1 clips, 44 unique character frames and four-frame naming/order;
    update those assertions and the smoke image count when deliberately extending
@@ -249,3 +250,7 @@ the first `impact` cue; absent a cue, contact defaults to the clip end. Sao Roi
 uses its cinematic impact step, then target hit and composed defeat when available.
 Actor facing follows stage side. The cinematic supports either picker, using idle
 when an actor lacks a requested pose.
+
+The scrubber marks contact in red (the documented end fallback when no impact cue
+is present). P once mode holds the final frame and stops; Space restarts a
+finished clip, while J resets and pauses. L increases speed by 0.25× and resumes.

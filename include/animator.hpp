@@ -23,6 +23,34 @@ struct Sample { Pose pose; std::vector<Fired> fired; };
 struct Library {
     std::map<std::string,std::map<std::string,Clip>> actors;
     undergod::Timeline cinematic;
+    // JSON insertion order, including composed clips; maps remain lookup tables.
+    std::map<std::string,std::vector<std::string>> clipOrder;
+};
+struct ActorPlayback {
+    std::string clip="idle";
+    double time=0;
+    bool playing=true,loop=true;
+};
+struct ActorAction {
+    enum Kind { None, SelectActor, AnimationSlot, Cinematic } kind=None;
+    int slot=0;
+    std::string actor;
+};
+// Portable registry, key resolution and independent actor transports. The active
+// transport is exposed for the timeline; switching stores it without touching data.
+class ActorControls : public ActorPlayback {
+    std::map<std::string,ActorPlayback> inactive_;
+public:
+    std::string actor="chick";
+    std::vector<std::string> Clips(const Library&) const;
+    std::vector<std::string> SlotClips(const Library&) const;
+    std::string Help(const Library&) const;
+    std::string ResolveSlot(const Library&,int slot) const;
+    bool Apply(const Library&,const ActorAction&);
+    bool Switch(const Library&,const std::string&);
+    ActorPlayback Playback(const std::string&) const;
+    void AdvanceOthers(const Library&,double delta);
+    void Reconcile(const Library&);
 };
 // Exact comparison includes every editable field, including cinematic parameters.
 bool SameDocument(const Library&,const Library&,bool cinematic);

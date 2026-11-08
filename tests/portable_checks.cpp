@@ -29,6 +29,74 @@ int main(){try{
   Check(c.composed==(c.id=="defeat"||c.id=="victory"),"Composed marker");
  }
  Check(count==15&&unique.size()==44,"15 clips reference exactly 44 source character frames");Result("clip_inventory_frames_durations");
+ {
+ ActorControls controls;
+ nlohmann::ordered_json catalog;{std::ifstream input("data/clips.json");input>>catalog;}
+ for(const auto& who:{"chick","frog"}){
+  controls.Apply(lib,{ActorAction::SelectActor,0,who});std::vector<std::string> expected;
+  for(const auto& entry:catalog["actors"][who].items())if(!entry.value().value("composed",false))expected.push_back(entry.key());
+  Check(controls.SlotClips(lib)==expected,"Slot list follows actual JSON order");
+  for(size_t i=0;i<expected.size();++i)Check(controls.ResolveSlot(lib,int(i+1))==expected[i],"Slot resolves catalog clip");
+ }
+ Result("actor_slot_catalog_mapping");
+ controls.Apply(lib,{ActorAction::SelectActor,0,"frog"});controls.time=321;controls.playing=false;
+ for(int slot:{-1,0,6,7,99}){
+  Check(!controls.Apply(lib,{ActorAction::AnimationSlot,slot,{}})&&controls.time==321&&controls.clip=="idle"&&!controls.playing&&controls.loop,"Invalid slot is full no-op");
+ }
+ Check(!controls.Apply(lib,{ActorAction::SelectActor,0,"missing"})&&controls.actor=="frog","Unknown actor no-op");
+ Result("actor_out_of_range_noop");
+ ActorControls cycle;Check(cycle.actor=="chick","Default active actor");
+ cycle.Apply(lib,{ActorAction::SelectActor,0,"frog"});Check(cycle.actor=="frog"&&cycle.Clips(lib).size()==7,"Select frog clip list");
+ cycle.Apply(lib,{ActorAction::SelectActor,0,"chick"});Check(cycle.actor=="chick"&&cycle.Clips(lib).size()==9,"Select chick clip list");
+ cycle.Apply(lib,{ActorAction::AnimationSlot,6,{}});cycle.Apply(lib,{ActorAction::SelectActor,0,"frog"});
+ Check(cycle.clip=="idle"&&cycle.time==0,"Actor select missing clip falls back to idle");
+ cycle.Apply(lib,{ActorAction::AnimationSlot,2,{}});cycle.time=40;cycle.Apply(lib,{ActorAction::SelectActor,0,"chick"});
+ Check(cycle.clip=="attack"&&cycle.time==0&&!cycle.loop,"Actor select retains available clip and restarts");
+ auto editedLibrary=lib;EditFrameDuration(editedLibrary.actors.at("chick").at("idle"),0,10);
+ cycle.Apply(editedLibrary,{ActorAction::SelectActor,0,"frog"});
+ Check(editedLibrary.actors.at("chick").at("idle").frames[0].duration==260,"Switch retains unsaved edits");
+ Result("actor_select_clip_list_and_edits");
+ ActorControls initial;initial.AdvanceOthers(lib,25);Check(initial.Playback("frog").time==25,"Unselected actor advances from startup");
+ ActorControls independent;independent.time=234;independent.Apply(lib,{ActorAction::SelectActor,0,"frog"});independent.time=456;
+ auto other=independent.Playback("chick");independent.Apply(lib,{ActorAction::AnimationSlot,2,{}});
+ Check(independent.clip=="attack"&&independent.time==0&&independent.playing&&!independent.loop,"Hotkey selects and starts with default mode");
+ for(bool loop:{false,true}){independent.time=87;independent.loop=loop;independent.playing=false;
+  independent.Apply(lib,{ActorAction::AnimationSlot,2,{}});
+  Check(independent.time==0&&independent.playing&&independent.loop==loop,"Same clip restart preserves loop/once override");
+ }
+ auto unchanged=independent.Playback("chick");
+ Check(unchanged.clip==other.clip&&unchanged.time==other.time&&unchanged.loop==other.loop&&unchanged.playing==other.playing,"Other player undisturbed");
+ independent.AdvanceOthers(lib,20);Check(independent.Playback("chick").time==254,"Other transport advances independently");
+ // Check isolation in the opposite direction with a paused, non-idle actor.
+ independent.time=111;independent.playing=false;independent.Apply(lib,{ActorAction::SelectActor,0,"chick"});
+ other=independent.Playback("frog");independent.Apply(lib,{ActorAction::AnimationSlot,3,{}});unchanged=independent.Playback("frog");
+ Check(unchanged.clip==other.clip&&unchanged.time==111&&!unchanged.playing&&unchanged.loop==other.loop,"Chick hotkey preserves paused frog");
+ // Undo/reload may remove a copied clip selected by an inactive actor.
+ auto removed=lib;auto copied=DuplicateClip(removed,"frog","idle");
+ independent.Switch(removed,"frog");independent.clip=copied;independent.Switch(removed,"chick");
+ removed.actors.at("frog").erase(copied);independent.Reconcile(removed);
+ Check(independent.Playback("frog").clip=="idle","Removed inactive clip safely falls back");
+ Result("actor_hotkey_restart_isolation");
+ independent.Apply(lib,{ActorAction::SelectActor,0,"frog"});auto before=independent.Playback("frog");
+ Check(!independent.Apply(lib,{ActorAction::Cinematic,0,{}})&&independent.clip==before.clip&&independent.time==before.time&&independent.playing==before.playing,"Frog cinematic no-op");
+ independent.Apply(lib,{ActorAction::SelectActor,0,"chick"});other=independent.Playback("frog");
+ Check(independent.Apply(lib,{ActorAction::Cinematic,0,{}})&&independent.clip=="sao_roi"&&independent.time==0&&independent.playing&&!independent.loop,"Chick cinematic starts once");
+ independent.time=100;independent.Apply(lib,{ActorAction::Cinematic,0,{}});Check(independent.time==0&&independent.Playback("frog").time==other.time,"Cinematic restarts without changing other transport");
+ independent.Apply(lib,{ActorAction::SelectActor,0,"frog"});Check(independent.clip=="idle","Frog cannot inherit chick cinematic");
+ Result("actor_cinematic_ownership");
+ for(const auto& who:{"chick","frog"}){controls.Apply(lib,{ActorAction::SelectActor,0,who});auto help=controls.Help(lib);auto slots=controls.SlotClips(lib);
+  for(size_t i=0;i<slots.size();++i)Check(help.find("F"+std::to_string(i+1)+" "+slots[i])!=std::string::npos,"Help matches catalog");
+  Check((help.find("C sao_roi")!=std::string::npos)==(controls.actor=="chick")&&help.find("1/2 switch actor")!=std::string::npos&&help.find("Active: "+controls.actor)!=std::string::npos,"Help actor, ownership and switching");
+  Check(help.find("[ ] switch")==std::string::npos,"Brackets stay cue nudges");
+ }
+ {Temp saved;auto copy=lib;std::string error;
+  Check(SaveClips(copy,error,saved.path.string()),"Save ordered catalog: "+error);
+  auto loaded=LoadLibrary(saved.path.string());
+  for(const auto& who:{"chick","frog"}){controls.Apply(lib,{ActorAction::SelectActor,0,who});
+   Check(controls.SlotClips(loaded)==controls.SlotClips(lib),"Hotkey order survives save/reload");}
+ }
+ Result("actor_help_matches_catalog");
+ }
  for(const auto& actor:lib.actors)for(const auto& entry:actor.second){const auto& c=entry.second;
   for(double t:{0.,1.,124.9,250.,320.,500.,650.,800.,1000.,3000.}){
    const auto before=SamplePose(c,t,c.loop);SamplePose(c,17,c.loop);Check(Same(before,SamplePose(c,t,c.loop)),"Pure sample determinism");Check(before.frame<4,"Sample frame in range");

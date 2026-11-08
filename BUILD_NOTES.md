@@ -185,3 +185,19 @@ Round 5 app source also passes MinGW C++17 -Wall -Wextra -Wpedantic
 -fsyntax-only using temporary hand-declared DxLib stubs outside the repository,
 including the new key constants. This verifies C++ syntax only, not actual DxLib
 SDK signatures or key definitions.
+
+
+Per-actor hotkey round: all 23 original portable RESULT groups are retained;
+six new groups cover catalog-order animation slots, out-of-range no-ops, actor
+selection and edit retention, isolated restarts and independent transports,
+chick-only cinematic ownership, and actor-specific help plus save/reload order.
+The 15 clips and 44 source character frames are unchanged. JSON insertion order
+is retained during parsing/saving so F-key slots do not become alphabetical.
+The portable core accepts actor-select, slot 1–6 and cinematic actions. Only the
+DxLib boundary translates physical keys. F1–F6 and C were previously unbound;
+1/2 selection and bracket cue nudges retain their existing roles.
+
+All 29 portable groups pass. App source passes MinGW C++17 warning-enabled syntax
+checking with temporary hand-declared DxLib stubs outside the repository. This
+checks C++ syntax, not real SDK declarations, key values, Windows rendering or
+interactive input. No Windows build, runtime test or smoke capture was performed.

@@ -15,7 +15,7 @@
 
 namespace studio {
 namespace {
-using Json=nlohmann::json;
+using Json=nlohmann::ordered_json;
 void Require(bool ok,const std::string& msg){if(!ok)throw std::runtime_error(msg);}
 double Number(const Json& j){double v=j.get<double>();Require(std::isfinite(v),"Nonfinite number");return v;}
 double Ease(double u,const std::string& ease){
@@ -68,6 +68,7 @@ static Library ParseLibrary(const Json& j,const std::string& root){
                 Require(cueNames.count(cue.action)&&cue.t>=0&&cue.t<=duration&&cue.duration>0&&cue.value>=0,"Invalid effect cue");c.cues.push_back(cue);
             }
             std::stable_sort(c.cues.begin(),c.cues.end(),[](const auto& a,const auto& b){return a.t<b.t;});
+            lib.clipOrder[c.actor].push_back(c.id);
             lib.actors[c.actor].emplace(c.id,std::move(c));
         }
         Require(!lib.actors[actor.key()].empty(),"Actor has no clips");
@@ -152,13 +153,17 @@ bool SaveClips(Library& current,std::string& error,const std::string& root){
     try{
         Json j;{std::ifstream input(target);Require(bool(input),"Cannot open data/clips.json");input>>j;}
         j["actors"]=Json::object();
-        for(const auto& actor:current.actors)for(const auto& entry:actor.second){
-            const auto& c=entry.second;Require(c.actor==actor.first&&c.id==entry.first,"Clip identity mismatch");
+        for(const auto& actor:current.actors){
+          ActorControls controls;controls.actor=actor.first;
+          for(const auto& id:controls.Clips(current)){
+            if(id=="sao_roi")continue;
+            const auto& c=actor.second.at(id);Require(c.actor==actor.first&&c.id==id,"Clip identity mismatch");
             Json v={{"loop",c.loop},{"composed",c.composed},{"frames",Json::array()},{"tracks",Json::object()},{"cues",Json::array()}};
             for(const auto& f:c.frames){Require(std::isfinite(f.duration)&&f.duration>=20,"Edited frame duration must be at least 20 ms");v["frames"].push_back({{"file",f.file},{"duration",f.duration}});}
             for(const auto& tr:c.tracks){v["tracks"][tr.first]=Json::array();for(const auto& k:tr.second){Require(std::isfinite(k.t)&&std::isfinite(k.value),"Invalid track number");v["tracks"][tr.first].push_back({{"t",k.t},{"value",k.value},{"ease",k.ease}});}}
             for(const auto& q:c.cues){Require(std::isfinite(q.t)&&std::isfinite(q.duration)&&std::isfinite(q.value),"Invalid cue number");v["cues"].push_back({{"t",q.t},{"duration",q.duration},{"value",q.value},{"action",q.action},{"text",q.text}});}
-            j["actors"][actor.first][entry.first]=std::move(v);
+            j["actors"][actor.first][id]=std::move(v);
+          }
         }
         auto validated=ParseLibrary(j,root); // Validate everything before touching the destination.
         Require(!std::filesystem::exists(temp),"Save temporary file already exists");
@@ -187,7 +192,7 @@ std::string DocumentKey(const Library& lib,bool cinematic){
     }}return j.dump();
 }
 void RestoreDocument(Library& target,const Library& source,bool cinematic){
-    if(cinematic)target.cinematic=source.cinematic;else target.actors=source.actors;
+    if(cinematic)target.cinematic=source.cinematic;else {target.actors=source.actors;target.clipOrder=source.clipOrder;}
 }
 }
 bool SameDocument(const Library& a,const Library& b,bool cinematic){return DocumentKey(a,cinematic)==DocumentKey(b,cinematic);}
@@ -273,5 +278,86 @@ CinematicPose SampleCinematic(const Library& lib,double ms,const std::string& pr
     const auto& pc=lib.actors.at(primary).at(p.playerClip);const auto& ec=lib.actors.at(target).at(p.enemyClip);
     p.player=SamplePose(pc,ms-playerStart,pc.loop);p.enemy=SamplePose(ec,ms-enemyStart,ec.loop);
     return p;
+}
+}
+
+namespace studio {
+std::vector<std::string> ActorControls::Clips(const Library& lib) const {
+    std::vector<std::string> result;
+    auto order=lib.clipOrder.find(actor);
+    if(order!=lib.clipOrder.end())for(const auto& id:order->second)
+        if(lib.actors.at(actor).count(id))result.push_back(id);
+    for(const auto& c:lib.actors.at(actor))
+        if(std::find(result.begin(),result.end(),c.first)==result.end())result.push_back(c.first);
+    if(actor=="chick")result.push_back("sao_roi");
+    return result;
+}
+std::vector<std::string> ActorControls::SlotClips(const Library& lib) const {
+    auto result=Clips(lib);
+    result.erase(std::remove_if(result.begin(),result.end(),[&](const auto& id){
+        return id=="sao_roi"||lib.actors.at(actor).at(id).composed;
+    }),result.end());
+    if(result.size()>6)result.resize(6);
+    return result;
+}
+std::string ActorControls::Help(const Library& lib) const {
+    std::string result="Active: "+actor+" | 1/2 switch actor | ";auto clips=SlotClips(lib);
+    for(size_t i=0;i<clips.size();++i){if(i)result+="  ";result+="F"+std::to_string(i+1)+" "+clips[i];}
+    if(actor=="frog")result+="  F6 no-op";
+    result+=actor=="chick"?" | C sao_roi":" | C no-op";
+    return result;
+}
+std::string ActorControls::ResolveSlot(const Library& lib,int slot) const {
+    auto clips=SlotClips(lib);
+    return slot>=1&&size_t(slot)<=clips.size()?clips[slot-1]:std::string{};
+}
+ActorPlayback ActorControls::Playback(const std::string& who) const {
+    if(who==actor)return *this;
+    auto it=inactive_.find(who);return it==inactive_.end()?ActorPlayback{}:it->second;
+}
+bool ActorControls::Switch(const Library& lib,const std::string& who){
+    if(!lib.actors.count(who)||who==actor)return false;
+    inactive_[actor]=*this;auto next=Playback(who);actor=who;
+    static_cast<ActorPlayback&>(*this)=next;
+    if(clip!="sao_roi"&&!lib.actors.at(actor).count(clip))clip="idle";
+    return true;
+}
+bool ActorControls::Apply(const Library& lib,const ActorAction& action){
+    if(action.kind==ActorAction::SelectActor){
+        if(!lib.actors.count(action.actor))return false;
+        // Preserve the legacy 1/2 behavior: retain the selected clip if available,
+        // otherwise idle, and restart using that clip's default loop mode.
+        auto selected=clip;
+        Switch(lib,action.actor);
+        clip=selected=="sao_roi"?(actor=="chick"?selected:"idle"):
+            (lib.actors.at(actor).count(selected)?selected:"idle");
+        time=0;playing=true;loop=clip=="sao_roi"?false:lib.actors.at(actor).at(clip).loop;
+        return true;
+    }
+    std::string selected;
+    if(action.kind==ActorAction::Cinematic){if(actor!="chick")return false;selected="sao_roi";}
+    else if(action.kind==ActorAction::AnimationSlot)selected=ResolveSlot(lib,action.slot);
+    if(selected.empty())return false;
+    // New clips use catalog defaults; same-clip restarts retain the P override.
+    if(clip!=selected)loop=selected=="sao_roi"?false:lib.actors.at(actor).at(selected).loop;
+    clip=selected;time=0;playing=true;return true;
+}
+void ActorControls::AdvanceOthers(const Library& lib,double delta){
+    for(const auto& entry:lib.actors)if(entry.first!=actor)inactive_.try_emplace(entry.first);
+    for(auto& entry:inactive_){if(entry.first==actor)continue;auto& p=entry.second;
+        if(!p.playing)continue;
+        const double duration=p.clip=="sao_roi"?CinematicDuration(lib.cinematic):lib.actors.at(entry.first).at(p.clip).Duration();
+        p.playing=AdvanceTransport(p.time,delta,duration,p.loop);
+    }
+}
+
+void ActorControls::Reconcile(const Library& lib){
+    for(auto it=inactive_.begin();it!=inactive_.end();){
+        if(!lib.actors.count(it->first)){it=inactive_.erase(it);continue;}
+        auto& p=it->second;
+        if((p.clip=="sao_roi"&&it->first!="chick")||(p.clip!="sao_roi"&&!lib.actors.at(it->first).count(p.clip)))p=ActorPlayback{};
+        ++it;
+    }
+    if(clip!="sao_roi"&&!lib.actors.at(actor).count(clip))static_cast<ActorPlayback&>(*this)=ActorPlayback{};
 }
 }

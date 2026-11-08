@@ -10,13 +10,13 @@ verification limits and provenance.
 | Actor | Frame clips | Composed clips | Cinematic |
 | --- | --- | --- | --- |
 | chick | idle, attack, hit, defend, ult_charge, ult_throw | defeat, victory | sao_roi (shared scene) |
-| frog | idle, attack, hit, defend, ult_charge | defeat, victory | sao_roi (shared scene) |
+| frog | idle, attack, hit, defend, ult_charge | defeat, victory | target in chick’s sao_roi scene |
 
 Every frame clip has four existing PNGs. Defeat uses the actor's four hit frames
 with fade, tilt, grayscale, darkening, and dust. Victory uses its four idle frames
 with the game's survivor bounce sampled into keys. No new character art is used.
-The cinematic uses the primary and target pickers; a missing primary pose falls
-back to idle (frog has no ult_throw).
+The desktop cinematic preview belongs to chick; frog participates as the target.
+The portable cinematic sampler retains its idle fallback for missing poses.
 
 The import contains 44 character frames, two 512×512 VFX images, four 256×256 card
 images, STYLE.md, and five unchanged game data JSONs. `data/clips.json` is the new
@@ -66,7 +66,9 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 
 | Input | Action |
 | --- | --- |
-| 1 / 2 | Select chick / frog, retaining the clip if available, otherwise idle |
+| 1 / 2 | Quick switch active actor to chick / frog, retaining the clip if available, otherwise idle; restart at zero |
+| F1–F6 | Play active actor animation slot (catalog order below); select and restart at zero, even while playing |
+| C | Restart sao_roi cinematic for chick; safe no-op for frog |
 | A | Cycle actors (also includes actors added to the catalog) |
 | Tab | Switch timeline panel between current clip and cinematic; choose clips with buttons |
 | Space | Play / pause; playing again from a finished nonlooping clip restarts it |
@@ -87,6 +89,10 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 | [ / ] | Nudge selected cue −/+10 ms; Shift uses 50 ms |
 | , / . | Shorten / lengthen selected frame by 10 ms (minimum 20 ms) |
 | Ctrl+S | Validate and save all edited clips to runtime data/clips.json |
+| Insert / N | Duplicate selected frame after itself (clip panel) |
+| Delete | Delete selected frame; retain at least one |
+| Ctrl+D | Duplicate current clip with a unique copy suffix |
+| Ctrl+Z / Ctrl+Y | Undo / redo the latest document edit (50-operation history) |
 | O | Toggle onion skin for the selected clip (previous 35%, next 20%, beneath current frame) |
 | B | Cycle arena / dark / checkerboard backdrop |
 | G | Toggle actor origin crosshair and floor line |
@@ -97,6 +103,30 @@ sheet. Character stepping honors each frame's individual duration. Time and fram
 readouts are zero-based; active cues describe the timeline even when their visual
 effect is disabled. Looping wraps the frames and tracks and repeats cues once per
 cycle. Terminal clips default to nonlooping and hold their final pose.
+
+The header identifies the active actor, whose clip timeline and animation hotkeys
+are being controlled. The help line shows `1/2 switch actor` and that actor's
+current F-key map. Both actors remain visible. Actor/clip selection retains
+unsaved document edits; only R reload or exiting discards them.
+
+| Key | chick | frog |
+| --- | --- | --- |
+| F1 | idle | idle |
+| F2 | attack | attack |
+| F3 | hit | hit |
+| F4 | defend | defend |
+| F5 | ult_charge | ult_charge |
+| F6 | ult_throw | no-op |
+| C | sao_roi cinematic | no-op |
+
+Slots follow the non-composed frame clips' order in `data/clips.json`; composed
+defeat/victory remain available through clip buttons. Catalog order survives
+save/reload. A new clip uses its catalog loop default; restarting the same clip
+retains the P loop/once override. F-key previews restart only the active actor's
+transport; the other actor keeps its clip, time, mode and play/pause state and
+continues advancing if playing. X exchanges and cinematic reaction choreography
+remain available. The existing `1`/`2`, `A`, `[`/`]`, Tab, Space, E, P, Ctrl+S and
+Ctrl+Z/Y bindings are retained. F1–F6 and C had no prior bindings.
 
 Reduced effects suppresses shake, flash, particles, charge pulsing and victory
 bounce, locks camera zoom to 1, and attenuates dim to 70/255 of normal, following
@@ -130,8 +160,8 @@ Ctrl+S validates the complete catalog, writes a temporary sibling and atomically
 replaces `data/clips.json`. On failure the destination stays untouched and a
 persistent error appears; successful save makes in-memory clips match reload.
 Edits remain in memory until saved; R discards them by reloading the runtime
-files. Save before switching away or exiting if you want to retain your edits;
-switching clips itself retains edits. Tab switches the panel to cinematic steps (time, action and parameters). Up/Down
+files. Save before exiting to retain your edits on disk; switching actors or clips
+itself retains edits in memory. Tab switches the panel to cinematic steps (time, action and parameters). Up/Down
 selects a step; [ / ] nudges it by 10 ms, or 50 ms with Shift, clamped to
 [0, current cinematic duration], with stable sorting and selection retention.
 Ctrl+S saves the panel's file transactionally after validation. Moving impact or
@@ -249,8 +279,8 @@ button) cycles the independent target on the right. X previews an attack exchang
 and returns both to idle. Attack, ult_charge and ult_throw trigger target hit at
 the first `impact` cue; absent a cue, contact defaults to the clip end. Sao Roi
 uses its cinematic impact step, then target hit and composed defeat when available.
-Actor facing follows stage side. The cinematic supports either picker, using idle
-when an actor lacks a requested pose.
+Actor facing follows stage side. The desktop cinematic is selectable for chick only; the portable sampler retains
+its idle fallback when an actor lacks a requested pose.
 
 The scrubber marks contact in red (the documented end fallback when no impact cue
 is present). P once mode holds the final frame and stops; Space restarts a

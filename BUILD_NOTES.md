@@ -80,6 +80,11 @@ Onion neighbor tests cover every delivered frame with and without looping, both
 endpoints, a single-frame clip and invalid indices. Onion rendering order, alpha,
 pivot alignment, mirroring and O input remain statically verified only.
 
+Backdrop cycling (arena/dark/checkerboard), G toggling, floor/crosshair alignment,
+stage clipping and readability over all three backgrounds remain Windows-only
+visual/input checks. They follow existing DxLib drawing and key-edge patterns
+and were statically syntax checked with the same temporary stubs.
+
 ## Reuse and provenance
 
 Source: sibling `~/projects/undergod-card/UndergodCard`, game repository revision

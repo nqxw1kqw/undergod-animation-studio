@@ -42,7 +42,7 @@ struct Images {
 struct Effects {bool shake=true,flash=true,particles=true,dim=true,reduced=false;};
 struct Studio {
  Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",clip="idle",notice;
- double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;bool playing=true,loop=true,onion=false;Effects effects;
+ double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;int backdrop=0;bool guides=false;bool playing=true,loop=true,onion=false;Effects effects;
  ~Studio(){if(sprite>=0)DeleteGraph(sprite);if(stage>=0)DeleteGraph(stage);if(font>=0)DeleteFontToHandle(font);}
  bool Cinematic()const{return clip=="sao_roi";}
  const Clip& Current()const{return lib.actors.at(actor).at(clip);}
@@ -124,10 +124,13 @@ struct Studio {
   if(!effects.shake||effects.reduced)shake=0;
   if(!effects.flash||effects.reduced)flash=0;
   SetDrawScreen(stage);ClearDrawScreen();
+  if(backdrop==0){
   for(int y=0;y<360;++y){double f=y/360.;DrawLine(0,y,W,y,C(int(227+17*f),int(240-3*f),int(237-23*f)));}
   for(int i=0;i<7;++i)DrawOval(i*280,330,240,170,C(196,217,191),TRUE);
   for(int i=0;i<6;++i)DrawOval(i*330-70,360,210,150,C(174,201,164),TRUE);
   DrawBox(0,306,W,360,C(220,227,182),TRUE);DrawBox(0,306,W,310,C(143,169,124),TRUE);
+  }else if(backdrop==1)DrawBox(0,0,W,360,C(35,39,48),TRUE);
+  else for(int y=0;y<360;y+=24)for(int x=0;x<W;x+=24){int shade=((x/24+y/24)%2)?175:215;DrawBox(x,y,x+24,y+24,C(shade,shade,shade),TRUE);}
   if(Cinematic())Actor("frog",cinematic.enemyClip,cinematic.enemy,1120);
   Blend(dim);DrawBox(0,0,W,360,C(33,28,60),TRUE);Blend();
   if(Cinematic())Actor("chick",cinematic.playerClip,cinematic.player,320);
@@ -149,6 +152,11 @@ struct Studio {
    if(q.action=="popup"){Blend(1-a.age/q.duration);Text(int(x-35),int(140-a.age*.07),q.text,C(172,85,106));Blend();}
   }
   Blend(flash);DrawBox(0,0,W,360,C(255,255,255),TRUE);Blend();
+  if(guides){
+   DrawLine(0,320,W,320,C(230,115,65));
+   auto origin=[&](int x){DrawLine(x-14,320,x+14,320,C(255,80,140),2);DrawLine(x,306,x,334,C(255,80,140),2);};
+   if(Cinematic()){origin(320);origin(1120);}else origin(actor=="frog"?1120:320);
+  }
   SetDrawScreen(DX_SCREEN_BACK);SetDrawArea(20,220,W-20,580);
   DrawRotaGraph3F(float(W/2+shake),400,W/2.f,180,zoom,zoom,0,stage,TRUE);SetDrawArea(0,0,W,H);
  }
@@ -181,6 +189,7 @@ struct Studio {
   Button({850,612,145,36},"< frame [Left]");Button({1005,612,155,36},"frame > [Right]");
   const Rect toggles[]={{24,664,160,36},{194,664,160,36},{364,664,180,36},{554,664,150,36},{714,664,245,36}};
   Button(toggles[0],"Shake [S]",effects.shake);Button(toggles[1],"Flash [F]",effects.flash);Button(toggles[2],"Particles [P]",effects.particles);Button(toggles[3],"Dim [D]",effects.dim);Button(toggles[4],"Reduced effects [E]",effects.reduced);
+  Text(24,708,std::string("Backdrop [B]: ")+(backdrop==0?"arena":backdrop==1?"dark":"checkerboard")+" | Guides [G]: "+(guides?"on":"off"));
   const double u=std::clamp(LocalTime()/Duration(),0.,1.);DrawBox(48,740,W-48,750,C(207,217,200),TRUE);DrawBox(48,740,48+int((W-96)*u),750,C(79,106,91),TRUE);DrawCircle(48+int((W-96)*u),745,8,C(79,106,91),TRUE);
   size_t frame=Cinematic()?SampleCinematic(lib,LocalTime()).player.frame:SamplePose(Current(),time,loop).frame;
   const size_t lastFrame=Cinematic()?lib.actors.at("chick").at(SampleCinematic(lib,LocalTime()).playerClip).frames.size()-1:Current().frames.size()-1;
@@ -243,6 +252,8 @@ struct Studio {
   if(press(KEY_INPUT_D)||button({554,664,150,36}))effects.dim=!effects.dim;
   if(press(KEY_INPUT_E)||button({714,664,245,36}))effects.reduced=!effects.reduced;
   if(held&&Rect{48,725,W-96,40}.Has(mx,my)){playing=false;time=Duration()*std::clamp(double(mx-48)/(W-96),0.,1.);if(loop&&time==Duration())time-=.001;}
+  if(press(KEY_INPUT_B))backdrop=(backdrop+1)%3;
+  if(press(KEY_INPUT_G))guides=!guides;
   if(press(KEY_INPUT_O))onion=!onion;
   if(press(KEY_INPUT_R))Reload();
  }

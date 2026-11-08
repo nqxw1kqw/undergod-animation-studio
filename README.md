@@ -86,6 +86,8 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 | , / . | Shorten / lengthen selected frame by 10 ms (minimum 20 ms) |
 | Ctrl+S | Validate and save all edited clips to runtime data/clips.json |
 | O | Toggle onion skin for the selected clip (previous 35%, next 20%, beneath current frame) |
+| B | Cycle arena / dark / checkerboard backdrop |
+| G | Toggle actor origin crosshair and floor line |
 | Esc | Exit |
 
 Cinematic arrow stepping uses 125 ms increments, matching the game's 8 fps impact
@@ -107,6 +109,11 @@ an error dialog and exits. Reload never writes JSON.
 Onion skin uses the current pose and actor pivot for neighboring sprites. Neighbors
 wrap when transport looping is on; nonlooping endpoints omit the absent neighbor.
 It is disabled for the shared cinematic.
+
+Stage guides mark the untransformed actor foot origin at stage y=320 (both actor
+origins in the cinematic). The floor line and crosshair share the stage camera,
+so zoom and shake move them with the scene. Backdrop and guides persist across
+clip selection and reload.
 
 ## In-app clip editing
 

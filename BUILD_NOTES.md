@@ -17,6 +17,9 @@ RESULT seamless_loop_wrap PASS
 RESULT cinematic_all_9_actions_sampling_and_skip PASS
 RESULT composed_terminal_tracks PASS
 RESULT transactional_reload_invalid_json_and_validation PASS
+RESULT timeline_nudge_clamp_resort_duration_edits PASS
+RESULT timeline_save_reload_roundtrip_equality PASS
+RESULT timeline_invalid_save_preserves_file_bytes PASS
 ```
 
 These cover all 15 delivered clips, the 44 unique character paths and index order,
@@ -62,6 +65,15 @@ exercise all controls, looping and scrub boundaries. Try malformed clips JSON,
 malformed cinematic JSON and a missing/undecodable image while the app is running;
 R should retain the previous scene and show the error. Restore valid files and
 reload, including changes to durations, tracks and simultaneous cues.
+
+Round 2 timeline tests cover cue clamp/sort/selection, frame floors, proportional
+track retiming, full-field save/reload equality, cinematic byte preservation and
+invalid edits anywhere in the catalog leaving clips.json byte-identical.
+The engine stays DxLib-free. Transactional replacement uses POSIX rename on Linux
+and MoveFileExW on Windows; the Windows replacement path is only statically
+checked here. Interactive row selection/scrolling, punctuation/Shift/Ctrl input,
+error notices, runtime write permissions and Windows file replacement still need
+Windows verification. No actual DxLib build or interactive test was performed.
 
 ## Reuse and provenance
 

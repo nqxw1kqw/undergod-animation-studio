@@ -12,7 +12,7 @@
 
 namespace {
 using namespace studio;
-constexpr int W=1440,H=900;
+constexpr int W=1440,H=1160;
 struct Rect { int x,y,w,h;bool Has(int mx,int my)const{return mx>=x&&mx<x+w&&my>=y&&my<y+h;} };
 unsigned C(int r,int g,int b){return GetColor(r,g,b);}
 void Blend(double alpha=1){SetDrawBlendMode(alpha>=1?DX_BLENDMODE_NOBLEND:DX_BLENDMODE_ALPHA,int(std::clamp(alpha,0.,1.)*255));}
@@ -42,13 +42,13 @@ struct Images {
 struct Effects {bool shake=true,flash=true,particles=true,dim=true,reduced=false;};
 struct Studio {
  Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",clip="idle",notice;
- double time=0,speed=1,noticeLeft=0;bool playing=true,loop=true;Effects effects;
+ double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;bool playing=true,loop=true;Effects effects;
  ~Studio(){if(sprite>=0)DeleteGraph(sprite);if(stage>=0)DeleteGraph(stage);if(font>=0)DeleteFontToHandle(font);}
  bool Cinematic()const{return clip=="sao_roi";}
  const Clip& Current()const{return lib.actors.at(actor).at(clip);}
  double Duration()const{return Cinematic()?CinematicDuration(lib.cinematic):Current().Duration();}
  double LocalTime()const{return loop?std::fmod(time,Duration()):std::min(time,Duration());}
- void Select(std::string a,std::string c){actor=std::move(a);clip=std::move(c);if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";time=0;loop=Cinematic()?false:Current().loop;playing=true;}
+ void Select(std::string a,std::string c){actor=std::move(a);clip=std::move(c);if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";selectedRow=0;time=0;loop=Cinematic()?false:Current().loop;playing=true;}
  void Reload(){
   try{auto next=LoadLibrary();Images nextImages;nextImages.Load(next);
    images.handles.swap(nextImages.handles);lib=std::move(next);
@@ -146,13 +146,28 @@ struct Studio {
   DrawRotaGraph3F(float(W/2+shake),400,W/2.f,180,zoom,zoom,0,stage,TRUE);SetDrawArea(0,0,W,H);
  }
  std::vector<std::string> Clips()const{std::vector<std::string> names;for(const auto& c:lib.actors.at(actor))names.push_back(c.first);names.push_back("sao_roi");return names;}
+ void Timeline(){
+  Text(24,904,"Timeline: Up/Down select | [ / ] cue -/+10 ms (Shift: 50) | , / . frame -/+10 ms | Ctrl+S save");
+  if(Cinematic()){Text(24,936,"Cinematic is read-only");return;}
+  const auto& c=Current();const size_t count=c.frames.size()+c.cues.size();
+  selectedRow=std::min(selectedRow,count-1);
+  const size_t first=selectedRow>=6?selectedRow-5:0;
+  for(size_t row=first;row<std::min(count,first+7);++row){
+   std::string label;
+   if(row<c.frames.size()){const auto& f=c.frames[row];label="Frame "+std::to_string(row)+"  "+f.file+"  "+Fixed(f.duration,1)+" ms";}
+   else{const auto& q=c.cues[row-c.frames.size()];label="Cue "+Fixed(q.t,1)+" ms  "+q.action;}
+   int y=936+int(row-first)*30;
+   if(row==selectedRow)DrawBox(20,y-2,W-20,y+26,C(220,229,211),TRUE);
+   Text(24,y,(row==selectedRow?"> ":"  ")+label);
+  }
+ }
  void Draw(){
   ClearDrawScreen();DrawBox(0,0,W,H,C(250,248,239),TRUE);
   Text(24,18,"UNDERGOD / ANIMATION STUDIO v1");Text(950,18,"A actor  |  Tab clip  |  R reload");
   Button({24,58,150,36},"Chick [1]",actor=="chick");Button({184,58,150,36},"Frog [2]",actor=="frog");
   auto names=Clips();for(size_t i=0;i<names.size();++i)Button({24+int(i%9)*155,110+int(i/9)*42,145,36},names[i],clip==names[i]);
   Text(24,176,Cinematic()?"Sao Roi / shared two-actor cinematic":actor+" / "+clip+(Current().composed?" / composed from existing frames":""));
-  World();
+  World();Timeline();
   Button({24,612,150,36},playing?"Pause [Space]":"Play [Space]",playing);
   Button({184,612,160,36},"Restart [Home]");Button({354,612,150,36},"Loop [L]",loop);
   Button({514,612,100,36},"- [PgDn]");Button({624,612,100,36},"+ [PgUp]");Text(740,621,Fixed(speed)+"x");
@@ -183,7 +198,7 @@ struct Studio {
   }else for(const auto& a:ActiveCues())cueText+=a.cue->action+" ";
   Text(24,803,"Active cues: "+(cueText.empty()?"none":cueText));
   Text(24,832,"Drag timeline to scrub | Shift+Left/Right: 50 ms | End: last pose | K: skip cinematic | Esc: exit");
-  if(!notice.empty())Text(24,864,notice.substr(0,145),notice.rfind("Reload failed",0)==0?C(180,65,70):C(70,120,80));
+  if(!notice.empty())Text(24,864,notice.substr(0,145),notice.find("failed")!=std::string::npos?C(180,65,70):C(70,120,80));
  }
  void Input(const char* keys,const char* previous,int mx,int my,bool clicked,bool held){
   auto press=[&](int k){return keys[k]&&!previous[k];};
@@ -206,7 +221,16 @@ struct Studio {
   if(press(KEY_INPUT_RIGHT)||button({1005,612,155,36})){if(shift){playing=false;time=std::min(Duration(),LocalTime()+50);}else Step(1);}
   if(press(KEY_INPUT_END)){playing=false;time=Duration();if(loop)time=std::max(0.,time-.001);}
   if(press(KEY_INPUT_K)&&Cinematic()&&lib.cinematic.skippable){playing=false;time=Duration();loop=false;}
-  if(press(KEY_INPUT_S)||button({24,664,160,36}))effects.shake=!effects.shake;
+  bool ctrl=keys[KEY_INPUT_LCONTROL]||keys[KEY_INPUT_RCONTROL];
+  if(ctrl&&press(KEY_INPUT_S)&&!Cinematic()){std::string error;bool ok=SaveClips(lib,error);notice=ok?"Saved data/clips.json":"Save failed: "+error;noticeLeft=ok?3:0;}
+  if(!Cinematic()){
+   auto& c=lib.actors.at(actor).at(clip);size_t count=c.frames.size()+c.cues.size();selectedRow=std::min(selectedRow,count-1);
+   if(press(KEY_INPUT_UP))selectedRow=(selectedRow+count-1)%count;
+   if(press(KEY_INPUT_DOWN))selectedRow=(selectedRow+1)%count;
+   if(selectedRow>=c.frames.size()&&(press(KEY_INPUT_LBRACKET)||press(KEY_INPUT_RBRACKET))){playing=false;selectedRow=c.frames.size()+NudgeCue(c,selectedRow-c.frames.size(),(press(KEY_INPUT_LBRACKET)?-1:1)*(shift?50.:10.));}
+   if(selectedRow<c.frames.size()&&(press(KEY_INPUT_COMMA)||press(KEY_INPUT_PERIOD))){playing=false;EditFrameDuration(c,selectedRow,press(KEY_INPUT_COMMA)?-10:10);time=std::min(time,Duration());}
+  }
+  if((!ctrl&&press(KEY_INPUT_S))||button({24,664,160,36}))effects.shake=!effects.shake;
   if(press(KEY_INPUT_F)||button({194,664,160,36}))effects.flash=!effects.flash;
   if(press(KEY_INPUT_P)||button({364,664,180,36}))effects.particles=!effects.particles;
   if(press(KEY_INPUT_D)||button({554,664,150,36}))effects.dim=!effects.dim;

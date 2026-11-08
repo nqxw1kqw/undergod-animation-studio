@@ -5,6 +5,13 @@
 #include <fstream>
 #include <set>
 #include <stdexcept>
+#include <cstdio>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 namespace studio {
 namespace {
@@ -29,8 +36,7 @@ void File(const std::string& root,const std::string& path){
 }
 }
 double Clip::Duration()const{double d=0;for(const auto& f:frames)d+=f.duration;return d;}
-Library LoadLibrary(const std::string& root){
-    std::ifstream f(root+"/data/clips.json");Require(bool(f),"Cannot open data/clips.json");Json j;f>>j;
+static Library ParseLibrary(const Json& j,const std::string& root){
     Require(j.at("version")==1,"Unsupported clips version");Library lib;
     const std::set<std::string> trackNames={"x","y","scale","rotation","r","g","b","alpha","desaturate"};
     const std::set<std::string> cueNames={"shake","flash","particles","popup","dim","zoom"};
@@ -41,7 +47,7 @@ Library LoadLibrary(const std::string& root){
             for(const auto& frame:v.at("frames")){
                 Frame fr{frame.at("file"),Number(frame.at("duration"))};Require(fr.duration>0,"Frame duration must be positive");File(root,fr.file);c.frames.push_back(fr);
             }
-            Require(!c.frames.empty(),"Empty clip: "+c.id);const double duration=c.Duration();
+            Require(!c.frames.empty(),"Empty clip: "+c.id);const double duration=c.Duration();Require(std::isfinite(duration),"Invalid clip duration");
             const auto tracks=v.value("tracks",Json::object());
             for(const auto& tr:tracks.items()){
                 Require(trackNames.count(tr.key())!=0,"Unknown track: "+tr.key());auto& keys=c.tracks[tr.key()];
@@ -59,7 +65,7 @@ Library LoadLibrary(const std::string& root){
             }
             for(const auto& q:v.value("cues",Json::array())){
                 Cue cue{Number(q.at("t")),Number(q.at("duration")),Number(q.at("value")),q.at("action"),q.value("text","")};
-                Require(cueNames.count(cue.action)&&cue.t>=0&&cue.t<duration&&cue.duration>0&&cue.value>=0,"Invalid effect cue");c.cues.push_back(cue);
+                Require(cueNames.count(cue.action)&&cue.t>=0&&cue.t<=duration&&cue.duration>0&&cue.value>=0,"Invalid effect cue");c.cues.push_back(cue);
             }
             std::stable_sort(c.cues.begin(),c.cues.end(),[](const auto& a,const auto& b){return a.t<b.t;});
             lib.actors[c.actor].emplace(c.id,std::move(c));
@@ -75,6 +81,53 @@ Library LoadLibrary(const std::string& root){
     for(const auto* a:{"chick","frog"})Require(lib.actors.at(a).count("idle"),"Idle required");
     File(root,"assets/pastel/vfx/spear.png");File(root,"assets/pastel/vfx/spear_impact.png");
     return lib;
+}
+Library LoadLibrary(const std::string& root){
+    std::ifstream f(root+"/data/clips.json");Require(bool(f),"Cannot open data/clips.json");Json j;f>>j;
+    return ParseLibrary(j,root);
+}
+size_t NudgeCue(Clip& c,size_t index,double delta){
+    Require(std::isfinite(delta),"Invalid cue delta");
+    c.cues.at(index).t=std::clamp(c.cues.at(index).t+delta,0.,c.Duration());
+    // Sort identities as well as values so selection follows the edited cue.
+    std::vector<size_t> order;for(size_t i=0;i<c.cues.size();++i)order.push_back(i);
+    std::stable_sort(order.begin(),order.end(),[&](size_t a,size_t b){return c.cues[a].t<c.cues[b].t;});
+    auto old=c.cues;size_t selected=0;
+    for(size_t i=0;i<order.size();++i){c.cues[i]=old[order[i]];if(order[i]==index)selected=i;}
+    return selected;
+}
+void EditFrameDuration(Clip& c,size_t index,double delta){
+    Require(std::isfinite(delta),"Invalid frame delta");const double before=c.Duration();
+    auto& f=c.frames.at(index);f.duration=std::max(20.,f.duration+delta);
+    const double after=c.Duration();
+    for(auto& track:c.tracks)for(auto& key:track.second)key.t=key.t==before?after:key.t*(after/before);
+    for(auto& cue:c.cues)cue.t=std::clamp(cue.t,0.,after);
+}
+bool SaveClips(Library& current,std::string& error,const std::string& root){
+    const auto target=std::filesystem::path(root)/"data/clips.json";
+    const auto temp=std::filesystem::path(root)/"data/clips.json.tmp";
+    bool created=false;
+    try{
+        Json j;{std::ifstream input(target);Require(bool(input),"Cannot open data/clips.json");input>>j;}
+        j["actors"]=Json::object();
+        for(const auto& actor:current.actors)for(const auto& entry:actor.second){
+            const auto& c=entry.second;Require(c.actor==actor.first&&c.id==entry.first,"Clip identity mismatch");
+            Json v={{"loop",c.loop},{"composed",c.composed},{"frames",Json::array()},{"tracks",Json::object()},{"cues",Json::array()}};
+            for(const auto& f:c.frames){Require(std::isfinite(f.duration)&&f.duration>=20,"Edited frame duration must be at least 20 ms");v["frames"].push_back({{"file",f.file},{"duration",f.duration}});}
+            for(const auto& tr:c.tracks){v["tracks"][tr.first]=Json::array();for(const auto& k:tr.second){Require(std::isfinite(k.t)&&std::isfinite(k.value),"Invalid track number");v["tracks"][tr.first].push_back({{"t",k.t},{"value",k.value},{"ease",k.ease}});}}
+            for(const auto& q:c.cues){Require(std::isfinite(q.t)&&std::isfinite(q.duration)&&std::isfinite(q.value),"Invalid cue number");v["cues"].push_back({{"t",q.t},{"duration",q.duration},{"value",q.value},{"action",q.action},{"text",q.text}});}
+            j["actors"][actor.first][entry.first]=std::move(v);
+        }
+        auto validated=ParseLibrary(j,root); // Validate everything before touching the destination.
+        Require(!std::filesystem::exists(temp),"Save temporary file already exists");
+        {std::ofstream output(temp,std::ios::binary);created=true;Require(bool(output),"Cannot create save temporary file");output<<j.dump(2)<<'\n';output.flush();Require(bool(output),"Cannot write save temporary file");output.close();Require(bool(output),"Cannot close save temporary file");}
+#ifdef _WIN32
+        Require(MoveFileExW(temp.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=0,"Cannot replace clips.json");
+#else
+        Require(std::rename(temp.c_str(),target.c_str())==0,"Cannot replace clips.json");
+#endif
+        current.actors.swap(validated.actors);error.clear();return true;
+    }catch(const std::exception& e){if(created){std::error_code ignored;std::filesystem::remove(temp,ignored);}error=e.what();return false;}
 }
 bool Reload(Library& current,std::string& error,const std::string& root){
     try{auto next=LoadLibrary(root);current=std::move(next);error.clear();return true;}catch(const std::exception& e){error=e.what();return false;}

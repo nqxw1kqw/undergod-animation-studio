@@ -81,6 +81,10 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 | S / F / P / D | Toggle shake / flash / particles / dim |
 | E | Toggle reduced effects master |
 | R | Reload both clip and cinematic data and images; restart time at zero on success |
+| Up / Down | Select a frame or cue row in the timeline panel (scrolls with selection) |
+| [ / ] | Nudge selected cue −/+10 ms; Shift uses 50 ms |
+| , / . | Shorten / lengthen selected frame by 10 ms (minimum 20 ms) |
+| Ctrl+S | Validate and save all edited clips to runtime data/clips.json |
 | Esc | Exit |
 
 Cinematic arrow stepping uses 125 ms increments, matching the game's 8 fps impact
@@ -98,6 +102,24 @@ A successful reload displays a three-second notice. Parse, validation or image
 loading errors keep the entire previous library and image cache and display a
 persistent error until the next reload. Initial startup without valid data shows
 an error dialog and exits. Reload never writes JSON.
+
+## In-app clip editing
+
+Select an actor and clip, then use Up/Down in the timeline panel to select a
+frame or cue. Frames appear in sequence with zero-based index, file and duration;
+cues follow in chronological order with time and type. Editing pauses playback.
+Cue nudges clamp to [0, clip duration], stable-sort ties and retain selection.
+Duration edits clamp to 20 ms, proportionally retime transform tracks to the new
+clip length (preserving loop endpoints), and clamp cues to the new end.
+
+Ctrl+S validates the complete catalog, writes a temporary sibling and atomically
+replaces `data/clips.json`. On failure the destination stays untouched and a
+persistent error appears; successful save makes in-memory clips match reload.
+Edits remain in memory until saved; R discards them by reloading the runtime
+files. Save before switching away or exiting if you want to retain your edits;
+switching clips itself retains edits. Cinematic rows are read-only and Ctrl+S
+there does nothing. `cinematic.json` is never written. Copy saved runtime
+`clips.json` back to repo `data/` before rebuilding if you want it in source control.
 
 ## Layout
 
@@ -162,7 +184,7 @@ optional. Supported actions and values:
 | dim | Overlay opacity held for duration (normally 0–1) |
 | zoom | Target camera multiplier, easing out from 1 during duration |
 
-Cue times must be in [0, clip length). Cues may outlive a clip; they remain visible
+Cue times must be in [0, clip length], including an editable end-boundary cue. Cues may outlive a clip; they remain visible
 while paused at its end, and looping can overlap a previous cycle's cue. Keep
 values at practical rendering scales. Cues are stable-sorted by time, preserving
 file order for ties. Unknown tracks, actions or easing names fail validation.

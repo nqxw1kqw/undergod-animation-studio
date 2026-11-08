@@ -92,5 +92,43 @@ int main(){try{
  auto broken=cinema;broken["steps"][0]["action"]="unknown";{std::ofstream f(tmp.path/"data/cinematic.json");f<<broken.dump();}reject();
  {std::ofstream f(tmp.path/"data/cinematic.json");f<<cinema.dump();}
  Check(Reload(lib,error,tmp.path.string())&&error.empty(),"Valid reload recovers");Result("transactional_reload_invalid_json_and_validation");
+ // Editing primitives keep cue selection stable across sorting and clamp both bounds.
+ Clip edit=lib.actors.at("chick").at("attack");
+ edit.cues={{10,100,1,"shake","a"},{20,100,1,"flash","b"},{30,100,1,"popup","c"}};
+ size_t selected=NudgeCue(edit,0,50);Check(selected==2&&edit.cues[2].text=="a"&&edit.cues[2].t==60,"Nudge reorders and follows selection");
+ selected=NudgeCue(edit,selected,-1000);Check(selected==0&&edit.cues[0].t==0,"Cue lower clamp");
+ selected=NudgeCue(edit,selected,10000);Check(selected==2&&edit.cues[2].t==edit.Duration(),"Cue inclusive upper clamp");
+ double old=edit.Duration();EditFrameDuration(edit,0,-10000);Check(edit.frames[0].duration==20&&edit.Duration()<old&&edit.cues[2].t==edit.Duration(),"Frame floor and cue clamp");
+ EditFrameDuration(edit,0,10);Check(edit.frames[0].duration==30&&edit.tracks.at("x").back().t==edit.Duration(),"Frame increase and track retiming");
+ Result("timeline_nudge_clamp_resort_duration_edits");
+ auto edited=LoadLibrary(tmp.path.string());edited.actors.at("chick").at("attack")=edit;
+ EditFrameDuration(edited.actors.at("chick").at("idle"),0,10);
+ auto bytes=[&](const fs::path& path){std::ifstream in(path,std::ios::binary);return std::string(std::istreambuf_iterator<char>(in),{});};
+ const auto cinematicBytes=bytes(tmp.path/"data/cinematic.json");
+ Check(SaveClips(edited,error,tmp.path.string()),"Save succeeds: "+error);
+ auto reloaded=LoadLibrary(tmp.path.string());
+ auto equal=[](const Library& a,const Library& b){
+  Check(a.actors.size()==b.actors.size(),"Actor roundtrip");
+  for(const auto& actor:a.actors){Check(actor.second.size()==b.actors.at(actor.first).size(),"Clip roundtrip");for(const auto& entry:actor.second){
+   const auto& x=entry.second;const auto& y=b.actors.at(actor.first).at(entry.first);
+   Check(x.actor==y.actor&&x.id==y.id&&x.loop==y.loop&&x.composed==y.composed&&x.frames.size()==y.frames.size()&&x.tracks.size()==y.tracks.size()&&x.cues.size()==y.cues.size(),"Clip fields roundtrip");
+   for(size_t i=0;i<x.frames.size();++i)Check(x.frames[i].file==y.frames[i].file&&x.frames[i].duration==y.frames[i].duration,"Frames roundtrip");
+   for(const auto& tr:x.tracks){const auto& keys=y.tracks.at(tr.first);Check(tr.second.size()==keys.size(),"Keys roundtrip");for(size_t i=0;i<keys.size();++i)Check(tr.second[i].t==keys[i].t&&tr.second[i].value==keys[i].value&&tr.second[i].ease==keys[i].ease,"Track roundtrip");}
+   for(size_t i=0;i<x.cues.size();++i){const auto& q=x.cues[i];const auto& r=y.cues[i];Check(q.t==r.t&&q.duration==r.duration&&q.value==r.value&&q.action==r.action&&q.text==r.text,"Cues roundtrip");}
+  }}
+ };
+ equal(edited,reloaded);Check(bytes(tmp.path/"data/cinematic.json")==cinematicBytes,"Cinematic untouched");
+ Result("timeline_save_reload_roundtrip_equality");
+ const auto saved=bytes(tmp.path/"data/clips.json");
+ for(int kind=0;kind<5;++kind){auto invalid=edited;auto& c=invalid.actors.at("frog").at("idle");
+  if(kind==0)c.frames[0].duration=19;
+  if(kind==1)c.frames[0].file="assets/missing.png";
+  if(kind==2)c.tracks["y"].back().t=c.Duration()+1;
+  if(kind==3)c.cues.push_back({0,10,1,"unknown",""});
+  if(kind==4)c.tracks["empty"]={};
+  Check(!SaveClips(invalid,error,tmp.path.string())&&!error.empty(),"Invalid complete catalog rejected");
+  Check(bytes(tmp.path/"data/clips.json")==saved,"Failed save leaves bytes identical");
+ }
+ Result("timeline_invalid_save_preserves_file_bytes");
  return 0;
  }catch(const std::exception& e){std::cerr<<"RESULT portable FAIL: "<<e.what()<<'\n';return 1;}}

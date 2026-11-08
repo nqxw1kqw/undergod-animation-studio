@@ -1,0 +1,1338 @@
+{
+  "version": 1,
+  "actors": {
+    "chick": {
+      "idle": {
+        "loop": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_idle_0.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_idle_1.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_idle_2.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_idle_3.png",
+            "duration": 250
+          }
+        ],
+        "tracks": {
+          "y": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 500,
+              "value": -2,
+              "ease": "smooth"
+            },
+            {
+              "t": 1000,
+              "value": 0,
+              "ease": "smooth"
+            }
+          ]
+        },
+        "cues": []
+      },
+      "attack": {
+        "loop": false,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_attack_0.png",
+            "duration": 162.5
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_attack_1.png",
+            "duration": 162.5
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_attack_2.png",
+            "duration": 162.5
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_attack_3.png",
+            "duration": 162.5
+          }
+        ],
+        "tracks": {
+          "x": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 220,
+              "value": 640,
+              "ease": "inQuad"
+            },
+            {
+              "t": 320,
+              "value": 640,
+              "ease": "linear"
+            },
+            {
+              "t": 650,
+              "value": 0,
+              "ease": "smooth"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 320,
+            "action": "shake",
+            "duration": 180,
+            "value": 4,
+            "text": ""
+          },
+          {
+            "t": 320,
+            "action": "particles",
+            "duration": 400,
+            "value": 10,
+            "text": ""
+          },
+          {
+            "t": 320,
+            "action": "popup",
+            "duration": 950,
+            "value": 12,
+            "text": "12"
+          }
+        ]
+      },
+      "hit": {
+        "loop": false,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_hit_0.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_hit_1.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_hit_2.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_hit_3.png",
+            "duration": 125
+          }
+        ],
+        "tracks": {
+          "x": [
+            {
+              "t": 0,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 25,
+              "value": -10.972444852644598,
+              "ease": "linear"
+            },
+            {
+              "t": 50,
+              "value": -1.4112000805986722,
+              "ease": "linear"
+            },
+            {
+              "t": 75,
+              "value": 8.797771058985873,
+              "ease": "linear"
+            },
+            {
+              "t": 100,
+              "value": 2.2353239855914073,
+              "ease": "linear"
+            },
+            {
+              "t": 125,
+              "value": -6.565999837423171,
+              "ease": "linear"
+            },
+            {
+              "t": 150,
+              "value": -2.4727109114505397,
+              "ease": "linear"
+            },
+            {
+              "t": 175,
+              "value": 4.39847879985835,
+              "ease": "linear"
+            },
+            {
+              "t": 200,
+              "value": 2.14629167200174,
+              "ease": "linear"
+            },
+            {
+              "t": 225,
+              "value": -2.411353279654863,
+              "ease": "linear"
+            },
+            {
+              "t": 250,
+              "value": -1.3005756803142334,
+              "ease": "linear"
+            },
+            {
+              "t": 275,
+              "value": 0.7117853423691234,
+              "ease": "linear"
+            },
+            {
+              "t": 300,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 325,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 350,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 375,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 400,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 425,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 450,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 475,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 500,
+              "value": 0.0,
+              "ease": "linear"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 0,
+            "action": "flash",
+            "duration": 100,
+            "value": 0.4,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "shake",
+            "duration": 180,
+            "value": 2,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "particles",
+            "duration": 400,
+            "value": 6,
+            "text": ""
+          }
+        ]
+      },
+      "defend": {
+        "loop": false,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_defend_0.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_defend_1.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_defend_2.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_defend_3.png",
+            "duration": 125
+          }
+        ],
+        "tracks": {},
+        "cues": [
+          {
+            "t": 0,
+            "action": "particles",
+            "duration": 400,
+            "value": 8,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "popup",
+            "duration": 950,
+            "value": 8,
+            "text": "+8 guard"
+          }
+        ]
+      },
+      "ult_charge": {
+        "loop": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_ult_charge_0.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_ult_charge_1.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_ult_charge_2.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_ult_charge_3.png",
+            "duration": 125
+          }
+        ],
+        "tracks": {
+          "scale": [
+            {
+              "t": 0,
+              "value": 1,
+              "ease": "linear"
+            },
+            {
+              "t": 250,
+              "value": 1.04,
+              "ease": "smooth"
+            },
+            {
+              "t": 500,
+              "value": 1,
+              "ease": "smooth"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 0,
+            "action": "dim",
+            "duration": 500,
+            "value": 0.2,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "zoom",
+            "duration": 500,
+            "value": 1.03,
+            "text": ""
+          }
+        ]
+      },
+      "ult_throw": {
+        "loop": false,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_ult_throw_0.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_ult_throw_1.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_ult_throw_2.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_ult_throw_3.png",
+            "duration": 250
+          }
+        ],
+        "tracks": {},
+        "cues": []
+      },
+      "defeat": {
+        "loop": false,
+        "composed": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_hit_0.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_hit_1.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_hit_2.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_hit_3.png",
+            "duration": 200
+          }
+        ],
+        "tracks": {
+          "alpha": [
+            {
+              "t": 0,
+              "value": 1,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 0.15,
+              "ease": "linear"
+            }
+          ],
+          "rotation": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 0.65,
+              "ease": "linear"
+            }
+          ],
+          "desaturate": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 1,
+              "ease": "linear"
+            }
+          ],
+          "r": [
+            {
+              "t": 0,
+              "value": 255,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 155,
+              "ease": "linear"
+            }
+          ],
+          "g": [
+            {
+              "t": 0,
+              "value": 255,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 155,
+              "ease": "linear"
+            }
+          ],
+          "b": [
+            {
+              "t": 0,
+              "value": 255,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 155,
+              "ease": "linear"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 0,
+            "action": "particles",
+            "duration": 800,
+            "value": 12,
+            "text": ""
+          }
+        ]
+      },
+      "victory": {
+        "loop": false,
+        "composed": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_chick_idle_0.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_idle_1.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_idle_2.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_chick_idle_3.png",
+            "duration": 200
+          }
+        ],
+        "tracks": {
+          "y": [
+            {
+              "t": 0,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 25,
+              "value": -3.5098684712985913,
+              "ease": "linear"
+            },
+            {
+              "t": 50,
+              "value": -6.884990950968175,
+              "ease": "linear"
+            },
+            {
+              "t": 75,
+              "value": -9.995794428193282,
+              "ease": "linear"
+            },
+            {
+              "t": 100,
+              "value": -12.722853259896587,
+              "ease": "linear"
+            },
+            {
+              "t": 125,
+              "value": -14.961473994026152,
+              "ease": "linear"
+            },
+            {
+              "t": 150,
+              "value": -16.625714615042593,
+              "ease": "linear"
+            },
+            {
+              "t": 175,
+              "value": -17.65168391032016,
+              "ease": "linear"
+            },
+            {
+              "t": 200,
+              "value": -17.999994292773025,
+              "ease": "linear"
+            },
+            {
+              "t": 225,
+              "value": -17.657273914349872,
+              "ease": "linear"
+            },
+            {
+              "t": 250,
+              "value": -16.63668001943742,
+              "ease": "linear"
+            },
+            {
+              "t": 275,
+              "value": -14.977393830222491,
+              "ease": "linear"
+            },
+            {
+              "t": 300,
+              "value": -12.743116355671779,
+              "ease": "linear"
+            },
+            {
+              "t": 325,
+              "value": -10.01962287094005,
+              "ease": "linear"
+            },
+            {
+              "t": 350,
+              "value": -6.911469952234157,
+              "ease": "linear"
+            },
+            {
+              "t": 375,
+              "value": -3.5379814860730168,
+              "ease": "linear"
+            },
+            {
+              "t": 400,
+              "value": -0.028667752496762906,
+              "ease": "linear"
+            },
+            {
+              "t": 425,
+              "value": -3.481746553585123,
+              "ease": "linear"
+            },
+            {
+              "t": 450,
+              "value": -6.858494485613367,
+              "ease": "linear"
+            },
+            {
+              "t": 475,
+              "value": -9.971940630664921,
+              "ease": "linear"
+            },
+            {
+              "t": 500,
+              "value": -12.702557892032576,
+              "ease": "linear"
+            },
+            {
+              "t": 525,
+              "value": -14.945516207378942,
+              "ease": "linear"
+            },
+            {
+              "t": 550,
+              "value": -16.6147070387758,
+              "ease": "linear"
+            },
+            {
+              "t": 575,
+              "value": -17.646049132001277,
+              "ease": "linear"
+            },
+            {
+              "t": 600,
+              "value": -17.999948634978924,
+              "ease": "linear"
+            },
+            {
+              "t": 625,
+              "value": -17.662819129911117,
+              "ease": "linear"
+            },
+            {
+              "t": 650,
+              "value": -16.647603224146042,
+              "ease": "linear"
+            },
+            {
+              "t": 675,
+              "value": -14.993275675586581,
+              "ease": "linear"
+            },
+            {
+              "t": 700,
+              "value": -12.763347127959912,
+              "ease": "linear"
+            },
+            {
+              "t": 725,
+              "value": -10.04342589846333,
+              "ease": "linear"
+            },
+            {
+              "t": 750,
+              "value": -6.937931422246134,
+              "ease": "linear"
+            },
+            {
+              "t": 775,
+              "value": -3.566085526598457,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": -0.05733543227648383,
+              "ease": "linear"
+            }
+          ]
+        },
+        "cues": []
+      }
+    },
+    "frog": {
+      "idle": {
+        "loop": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_frog_idle_0.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_idle_1.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_idle_2.png",
+            "duration": 250
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_idle_3.png",
+            "duration": 250
+          }
+        ],
+        "tracks": {
+          "y": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 500,
+              "value": -2,
+              "ease": "smooth"
+            },
+            {
+              "t": 1000,
+              "value": 0,
+              "ease": "smooth"
+            }
+          ]
+        },
+        "cues": []
+      },
+      "attack": {
+        "loop": false,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_frog_attack_0.png",
+            "duration": 162.5
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_attack_1.png",
+            "duration": 162.5
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_attack_2.png",
+            "duration": 162.5
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_attack_3.png",
+            "duration": 162.5
+          }
+        ],
+        "tracks": {
+          "x": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 220,
+              "value": -630,
+              "ease": "inQuad"
+            },
+            {
+              "t": 320,
+              "value": -630,
+              "ease": "linear"
+            },
+            {
+              "t": 650,
+              "value": 0,
+              "ease": "smooth"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 320,
+            "action": "shake",
+            "duration": 180,
+            "value": 4,
+            "text": ""
+          },
+          {
+            "t": 320,
+            "action": "particles",
+            "duration": 400,
+            "value": 10,
+            "text": ""
+          },
+          {
+            "t": 320,
+            "action": "popup",
+            "duration": 950,
+            "value": 12,
+            "text": "12"
+          }
+        ]
+      },
+      "hit": {
+        "loop": false,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_frog_hit_0.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_hit_1.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_hit_2.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_hit_3.png",
+            "duration": 125
+          }
+        ],
+        "tracks": {
+          "x": [
+            {
+              "t": 0,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 25,
+              "value": 10.972444852644598,
+              "ease": "linear"
+            },
+            {
+              "t": 50,
+              "value": 1.4112000805986722,
+              "ease": "linear"
+            },
+            {
+              "t": 75,
+              "value": -8.797771058985873,
+              "ease": "linear"
+            },
+            {
+              "t": 100,
+              "value": -2.2353239855914073,
+              "ease": "linear"
+            },
+            {
+              "t": 125,
+              "value": 6.565999837423171,
+              "ease": "linear"
+            },
+            {
+              "t": 150,
+              "value": 2.4727109114505397,
+              "ease": "linear"
+            },
+            {
+              "t": 175,
+              "value": -4.39847879985835,
+              "ease": "linear"
+            },
+            {
+              "t": 200,
+              "value": -2.14629167200174,
+              "ease": "linear"
+            },
+            {
+              "t": 225,
+              "value": 2.411353279654863,
+              "ease": "linear"
+            },
+            {
+              "t": 250,
+              "value": 1.3005756803142334,
+              "ease": "linear"
+            },
+            {
+              "t": 275,
+              "value": -0.7117853423691234,
+              "ease": "linear"
+            },
+            {
+              "t": 300,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 325,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 350,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 375,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 400,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 425,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 450,
+              "value": 0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 475,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 500,
+              "value": -0.0,
+              "ease": "linear"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 0,
+            "action": "flash",
+            "duration": 100,
+            "value": 0.4,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "shake",
+            "duration": 180,
+            "value": 2,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "particles",
+            "duration": 400,
+            "value": 6,
+            "text": ""
+          }
+        ]
+      },
+      "defend": {
+        "loop": false,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_frog_defend_0.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_defend_1.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_defend_2.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_defend_3.png",
+            "duration": 125
+          }
+        ],
+        "tracks": {},
+        "cues": [
+          {
+            "t": 0,
+            "action": "particles",
+            "duration": 400,
+            "value": 8,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "popup",
+            "duration": 950,
+            "value": 8,
+            "text": "+8 guard"
+          }
+        ]
+      },
+      "ult_charge": {
+        "loop": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_frog_ult_charge_0.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_ult_charge_1.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_ult_charge_2.png",
+            "duration": 125
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_ult_charge_3.png",
+            "duration": 125
+          }
+        ],
+        "tracks": {
+          "scale": [
+            {
+              "t": 0,
+              "value": 1,
+              "ease": "linear"
+            },
+            {
+              "t": 250,
+              "value": 1.04,
+              "ease": "smooth"
+            },
+            {
+              "t": 500,
+              "value": 1,
+              "ease": "smooth"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 0,
+            "action": "dim",
+            "duration": 500,
+            "value": 0.2,
+            "text": ""
+          },
+          {
+            "t": 0,
+            "action": "zoom",
+            "duration": 500,
+            "value": 1.03,
+            "text": ""
+          }
+        ]
+      },
+      "defeat": {
+        "loop": false,
+        "composed": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_frog_hit_0.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_hit_1.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_hit_2.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_hit_3.png",
+            "duration": 200
+          }
+        ],
+        "tracks": {
+          "alpha": [
+            {
+              "t": 0,
+              "value": 1,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 0.15,
+              "ease": "linear"
+            }
+          ],
+          "rotation": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": -0.65,
+              "ease": "linear"
+            }
+          ],
+          "desaturate": [
+            {
+              "t": 0,
+              "value": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 1,
+              "ease": "linear"
+            }
+          ],
+          "r": [
+            {
+              "t": 0,
+              "value": 255,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 155,
+              "ease": "linear"
+            }
+          ],
+          "g": [
+            {
+              "t": 0,
+              "value": 255,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 155,
+              "ease": "linear"
+            }
+          ],
+          "b": [
+            {
+              "t": 0,
+              "value": 255,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": 155,
+              "ease": "linear"
+            }
+          ]
+        },
+        "cues": [
+          {
+            "t": 0,
+            "action": "particles",
+            "duration": 800,
+            "value": 12,
+            "text": ""
+          }
+        ]
+      },
+      "victory": {
+        "loop": false,
+        "composed": true,
+        "frames": [
+          {
+            "file": "assets/pastel/characters/char_frog_idle_0.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_idle_1.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_idle_2.png",
+            "duration": 200
+          },
+          {
+            "file": "assets/pastel/characters/char_frog_idle_3.png",
+            "duration": 200
+          }
+        ],
+        "tracks": {
+          "y": [
+            {
+              "t": 0,
+              "value": -0.0,
+              "ease": "linear"
+            },
+            {
+              "t": 25,
+              "value": -3.5098684712985913,
+              "ease": "linear"
+            },
+            {
+              "t": 50,
+              "value": -6.884990950968175,
+              "ease": "linear"
+            },
+            {
+              "t": 75,
+              "value": -9.995794428193282,
+              "ease": "linear"
+            },
+            {
+              "t": 100,
+              "value": -12.722853259896587,
+              "ease": "linear"
+            },
+            {
+              "t": 125,
+              "value": -14.961473994026152,
+              "ease": "linear"
+            },
+            {
+              "t": 150,
+              "value": -16.625714615042593,
+              "ease": "linear"
+            },
+            {
+              "t": 175,
+              "value": -17.65168391032016,
+              "ease": "linear"
+            },
+            {
+              "t": 200,
+              "value": -17.999994292773025,
+              "ease": "linear"
+            },
+            {
+              "t": 225,
+              "value": -17.657273914349872,
+              "ease": "linear"
+            },
+            {
+              "t": 250,
+              "value": -16.63668001943742,
+              "ease": "linear"
+            },
+            {
+              "t": 275,
+              "value": -14.977393830222491,
+              "ease": "linear"
+            },
+            {
+              "t": 300,
+              "value": -12.743116355671779,
+              "ease": "linear"
+            },
+            {
+              "t": 325,
+              "value": -10.01962287094005,
+              "ease": "linear"
+            },
+            {
+              "t": 350,
+              "value": -6.911469952234157,
+              "ease": "linear"
+            },
+            {
+              "t": 375,
+              "value": -3.5379814860730168,
+              "ease": "linear"
+            },
+            {
+              "t": 400,
+              "value": -0.028667752496762906,
+              "ease": "linear"
+            },
+            {
+              "t": 425,
+              "value": -3.481746553585123,
+              "ease": "linear"
+            },
+            {
+              "t": 450,
+              "value": -6.858494485613367,
+              "ease": "linear"
+            },
+            {
+              "t": 475,
+              "value": -9.971940630664921,
+              "ease": "linear"
+            },
+            {
+              "t": 500,
+              "value": -12.702557892032576,
+              "ease": "linear"
+            },
+            {
+              "t": 525,
+              "value": -14.945516207378942,
+              "ease": "linear"
+            },
+            {
+              "t": 550,
+              "value": -16.6147070387758,
+              "ease": "linear"
+            },
+            {
+              "t": 575,
+              "value": -17.646049132001277,
+              "ease": "linear"
+            },
+            {
+              "t": 600,
+              "value": -17.999948634978924,
+              "ease": "linear"
+            },
+            {
+              "t": 625,
+              "value": -17.662819129911117,
+              "ease": "linear"
+            },
+            {
+              "t": 650,
+              "value": -16.647603224146042,
+              "ease": "linear"
+            },
+            {
+              "t": 675,
+              "value": -14.993275675586581,
+              "ease": "linear"
+            },
+            {
+              "t": 700,
+              "value": -12.763347127959912,
+              "ease": "linear"
+            },
+            {
+              "t": 725,
+              "value": -10.04342589846333,
+              "ease": "linear"
+            },
+            {
+              "t": 750,
+              "value": -6.937931422246134,
+              "ease": "linear"
+            },
+            {
+              "t": 775,
+              "value": -3.566085526598457,
+              "ease": "linear"
+            },
+            {
+              "t": 800,
+              "value": -0.05733543227648383,
+              "ease": "linear"
+            }
+          ]
+        },
+        "cues": []
+      }
+    }
+  }
+}

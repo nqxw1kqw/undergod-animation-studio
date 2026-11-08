@@ -1,0 +1,128 @@
+#include "animator.hpp"
+#include "../third_party/nlohmann/json.hpp"
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <set>
+#include <stdexcept>
+
+namespace studio {
+namespace {
+using Json=nlohmann::json;
+void Require(bool ok,const std::string& msg){if(!ok)throw std::runtime_error(msg);}
+double Number(const Json& j){double v=j.get<double>();Require(std::isfinite(v),"Nonfinite number");return v;}
+double Ease(double u,const std::string& ease){
+    if(ease=="smooth")return u*u*(3-2*u); // Game::CardVisual / ActorOffset
+    if(ease=="inQuad")return u*u;
+    if(ease=="outQuad")return 1-(1-u)*(1-u); // Game::SampleZoom / SpearTip
+    return u;
+}
+double Track(const std::vector<Key>& keys,double t){
+    if(t<=keys.front().t)return keys.front().value;
+    for(size_t i=1;i<keys.size();++i)if(t<keys[i].t){const auto& a=keys[i-1];const auto& b=keys[i];return a.value+(b.value-a.value)*Ease((t-a.t)/(b.t-a.t),b.ease);}
+    return keys.back().value;
+}
+void File(const std::string& root,const std::string& path){
+    const std::filesystem::path p(path);
+    Require(!p.is_absolute()&&path.find("..") == std::string::npos,"Unsafe asset path: "+path);
+    Require(std::filesystem::is_regular_file(std::filesystem::path(root)/p),"Missing asset: "+path);
+}
+}
+double Clip::Duration()const{double d=0;for(const auto& f:frames)d+=f.duration;return d;}
+Library LoadLibrary(const std::string& root){
+    std::ifstream f(root+"/data/clips.json");Require(bool(f),"Cannot open data/clips.json");Json j;f>>j;
+    Require(j.at("version")==1,"Unsupported clips version");Library lib;
+    const std::set<std::string> trackNames={"x","y","scale","rotation","r","g","b","alpha","desaturate"};
+    const std::set<std::string> cueNames={"shake","flash","particles","popup","dim","zoom"};
+    for(const auto& actor:j.at("actors").items()){
+        Require(!actor.key().empty(),"Empty actor");
+        for(const auto& entry:actor.value().items()){
+            Clip c;c.actor=actor.key();c.id=entry.key();const auto& v=entry.value();c.loop=v.at("loop");c.composed=v.value("composed",false);
+            for(const auto& frame:v.at("frames")){
+                Frame fr{frame.at("file"),Number(frame.at("duration"))};Require(fr.duration>0,"Frame duration must be positive");File(root,fr.file);c.frames.push_back(fr);
+            }
+            Require(!c.frames.empty(),"Empty clip: "+c.id);const double duration=c.Duration();
+            const auto tracks=v.value("tracks",Json::object());
+            for(const auto& tr:tracks.items()){
+                Require(trackNames.count(tr.key())!=0,"Unknown track: "+tr.key());auto& keys=c.tracks[tr.key()];
+                for(const auto& k:tr.value()){
+                    Key key{Number(k.at("t")),Number(k.at("value")),k.value("ease","linear")};
+                    Require(key.t>=0&&key.t<=duration&&(keys.empty()||key.t>keys.back().t),"Invalid key time");
+                    Require(key.ease=="linear"||key.ease=="smooth"||key.ease=="inQuad"||key.ease=="outQuad","Unknown easing");
+                    if(tr.key()=="scale")Require(key.value>0,"Scale must be positive");
+                    if(tr.key()=="alpha"||tr.key()=="desaturate")Require(key.value>=0&&key.value<=1,"Normalized track out of range");
+                    if(tr.key()=="r"||tr.key()=="g"||tr.key()=="b")Require(key.value>=0&&key.value<=255,"Tint out of range");
+                    keys.push_back(key);
+                }
+                Require(!keys.empty(),"Empty track");
+                if(c.loop)Require(keys.front().t==0&&keys.back().t==duration&&keys.front().value==keys.back().value,"Loop track endpoints must match");
+            }
+            for(const auto& q:v.value("cues",Json::array())){
+                Cue cue{Number(q.at("t")),Number(q.at("duration")),Number(q.at("value")),q.at("action"),q.value("text","")};
+                Require(cueNames.count(cue.action)&&cue.t>=0&&cue.t<duration&&cue.duration>0&&cue.value>=0,"Invalid effect cue");c.cues.push_back(cue);
+            }
+            std::stable_sort(c.cues.begin(),c.cues.end(),[](const auto& a,const auto& b){return a.t<b.t;});
+            lib.actors[c.actor].emplace(c.id,std::move(c));
+        }
+        Require(!lib.actors[actor.key()].empty(),"Actor has no clips");
+    }
+    Require(lib.actors.count("chick")&&lib.actors.count("frog"),"Required actors missing");
+    lib.cinematic=undergod::LoadTimeline(root+"/data/cinematic.json");
+    for(const auto& s:lib.cinematic.steps){
+        Require(std::isfinite(s.t)&&std::isfinite(s.duration)&&std::isfinite(s.value),"Invalid cinematic number");
+        if(s.cue==undergod::Cue::Pose)Require(lib.actors.at(s.enemy?"frog":"chick").count(s.pose),"Cinematic references missing clip");
+    }
+    for(const auto* a:{"chick","frog"})Require(lib.actors.at(a).count("idle"),"Idle required");
+    File(root,"assets/pastel/vfx/spear.png");File(root,"assets/pastel/vfx/spear_impact.png");
+    return lib;
+}
+bool Reload(Library& current,std::string& error,const std::string& root){
+    try{auto next=LoadLibrary(root);current=std::move(next);error.clear();return true;}catch(const std::exception& e){error=e.what();return false;}
+}
+Pose SamplePose(const Clip& c,double ms,bool loop){
+    Require(std::isfinite(ms),"Invalid sample time");const double duration=c.Duration();Require(duration>0,"Empty clip");
+    double t=std::max(0.,ms);t=loop?std::fmod(t,duration):std::min(t,duration);
+    Pose p;double boundary=0;p.frame=c.frames.size()-1;
+    for(size_t i=0;i<c.frames.size();++i){boundary+=c.frames[i].duration;if(t<boundary){p.frame=i;break;}}
+    std::map<std::string,double*> out={{"x",&p.x},{"y",&p.y},{"scale",&p.scale},{"rotation",&p.rotation},{"r",&p.r},{"g",&p.g},{"b",&p.b},{"alpha",&p.alpha},{"desaturate",&p.desaturate}};
+    for(const auto& tr:c.tracks)*out.at(tr.first)=Track(tr.second,t);
+    return p;
+}
+Sample SampleInterval(const Clip& c,double previous,double ms,bool loop){
+    Require(std::isfinite(previous)&&std::isfinite(ms)&&ms>=0,"Invalid interval");
+    Sample s;s.pose=SamplePose(c,ms,loop);if(ms<previous)return s;
+    const double d=c.Duration();const long long first=loop?static_cast<long long>(std::max(0.,std::floor(previous/d))):0;
+    const long long last=loop?static_cast<long long>(std::floor(ms/d)):0;
+    for(long long cycle=first;cycle<=last;++cycle)for(size_t i=0;i<c.cues.size();++i){double at=cycle*d+c.cues[i].t;if(at>previous&&at<=ms)s.fired.push_back({i,cycle,at});}
+    return s;
+}
+Sample Player::Advance(const Clip& c,double ms,bool loop){auto s=SampleInterval(c,previous_,ms,loop);previous_=ms;return s;}
+double CinematicDuration(const undergod::Timeline& t){double end=0;for(const auto& s:t.steps)end=std::max(end,double(s.t));return end;}
+CinematicPose SampleCinematic(const Library& lib,double ms){
+    using undergod::Cue;CinematicPose p;double playerStart=0,enemyStart=0;
+    double zoomStart=1,zoomTarget=1,zoomTime=0,zoomDuration=0;
+    double spearTime=0,spearDuration=1,fx=0,fy=0,tx=0,ty=0;
+    auto zoom=[&](double t){double u=zoomDuration>0?std::clamp((t-zoomTime)/zoomDuration,0.,1.):1;return zoomStart+(zoomTarget-zoomStart)*(1-(1-u)*(1-u));};
+    // Replaying the game's portable cursor makes seeks deterministic, including
+    // overlapping zooms sampled at each step boundary rather than at update end.
+    undergod::TimelinePlayer player;
+    player.Start(lib.cinematic,[&](const undergod::Step& s){
+        double late=std::max(0.,ms-s.t);
+        switch(s.cue){
+        case Cue::Dim:p.dim=s.value;break;
+        case Cue::Zoom:zoomStart=zoom(s.t);zoomTarget=s.value;zoomTime=s.t;zoomDuration=s.duration;break;
+        case Cue::Pose:if(s.enemy){p.enemyClip=s.pose;enemyStart=s.t;}else{p.playerClip=s.pose;playerStart=s.t;}break;
+        case Cue::Vfx:p.vfxAge=late;p.vfxFrames=int(s.value);p.vfxEnemy=s.enemy;break;
+        case Cue::Spear:p.spearVisible=true;p.falling=s.falling;spearTime=s.t;spearDuration=s.duration;fx=s.from_x;fy=s.from_y;tx=s.to_x;ty=s.to_y;break;
+        case Cue::Shake:p.shake=late<s.duration?std::sin(ms*.095)*s.value*std::min(1.,(s.duration-late)/180.):0;break;
+        case Cue::Flash:p.flash=s.duration>0?std::max(0.,1-late/s.duration):0;break;
+        case Cue::Impact:case Cue::End:break;
+        }
+    },[&]{p.impacted=true;},[&]{p.ended=true;p.dim=0;p.spearVisible=false;p.vfxAge=-1;p.shake=p.flash=0;zoomStart=zoomTarget=1;p.playerClip=p.enemyClip="idle";playerStart=enemyStart=ms;});
+    player.Advance(float(std::max(0.,ms)));p.zoom=zoom(ms);
+    double u=std::clamp((ms-spearTime)/spearDuration,0.,1.);u=p.falling?u*u:1-(1-u)*(1-u);p.spearX=fx+(tx-fx)*u;p.spearY=fy+(ty-fy)*u;
+    const auto& pc=lib.actors.at("chick").at(p.playerClip);const auto& ec=lib.actors.at("frog").at(p.enemyClip);
+    p.player=SamplePose(pc,ms-playerStart,pc.loop);p.enemy=SamplePose(ec,ms-enemyStart,ec.loop);
+    return p;
+}
+}

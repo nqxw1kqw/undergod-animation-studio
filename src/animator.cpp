@@ -174,6 +174,35 @@ bool SaveClips(Library& current,std::string& error,const std::string& root){
 bool Reload(Library& current,std::string& error,const std::string& root){
     try{auto next=LoadLibrary(root);current=std::move(next);error.clear();return true;}catch(const std::exception& e){error=e.what();return false;}
 }
+namespace {
+std::string DocumentKey(const Library& lib,bool cinematic){
+    Json j=Json::array();
+    if(cinematic){j.push_back(lib.cinematic.skippable);for(const auto& s:lib.cinematic.steps)
+        j.push_back({s.t,int(s.cue),s.value,s.duration,s.enemy,s.pose,s.falling,s.from_x,s.from_y,s.to_x,s.to_y});
+    }else for(const auto& a:lib.actors){j.push_back(a.first);for(const auto& entry:a.second){const auto& c=entry.second;
+        j.push_back({entry.first,c.actor,c.id,c.loop,c.composed});
+        for(const auto& f:c.frames)j.push_back({f.file,f.duration});
+        j.push_back("tracks");for(const auto& tr:c.tracks){j.push_back(tr.first);for(const auto& k:tr.second)j.push_back({k.t,k.value,k.ease});}
+        j.push_back("cues");for(const auto& q:c.cues)j.push_back({q.t,q.duration,q.value,q.action,q.text});
+    }}return j.dump();
+}
+void RestoreDocument(Library& target,const Library& source,bool cinematic){
+    if(cinematic)target.cinematic=source.cinematic;else target.actors=source.actors;
+}
+}
+bool SameDocument(const Library& a,const Library& b,bool cinematic){return DocumentKey(a,cinematic)==DocumentKey(b,cinematic);}
+void EditHistory::Record(const Library& before,const Library& after,bool cinematic){
+    if(SameDocument(before,after,cinematic))return;
+    undo_.push_back({before,after,cinematic});if(undo_.size()>Limit)undo_.erase(undo_.begin());redo_.clear();
+}
+bool EditHistory::Undo(Library& lib){
+    if(undo_.empty())return false;
+    auto entry=std::move(undo_.back());undo_.pop_back();RestoreDocument(lib,entry.before,entry.cinematic);redo_.push_back(std::move(entry));return true;
+}
+bool EditHistory::Redo(Library& lib){
+    if(redo_.empty())return false;
+    auto entry=std::move(redo_.back());redo_.pop_back();RestoreDocument(lib,entry.after,entry.cinematic);undo_.push_back(std::move(entry));return true;
+}
 double ImpactTime(const Clip& c){for(const auto& q:c.cues)if(q.action=="impact")return q.t;return c.Duration();}
 double ImpactTime(const undergod::Timeline& t){for(const auto& s:t.steps)if(s.cue==undergod::Cue::Impact)return s.t;return CinematicDuration(t);}
 Reaction TargetReaction(const Library& lib,const std::string& target,double time,double impact,bool defeat){

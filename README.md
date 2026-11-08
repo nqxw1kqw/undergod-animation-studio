@@ -304,3 +304,13 @@ Structural edits pause playback and reset time to zero. Like duration edits,
 they proportionally retime tracks, preserve loop endpoints, and clamp cue start
 times to the new clip end without changing cue duration or tie order. Ctrl+S
 uses the same transactional catalog validation; failed saves leave disk untouched.
+
+Ctrl+Z undoes and Ctrl+Y redoes clip cue nudges, frame durations, structural
+changes and cinematic step nudges across both panels in session order. History
+holds the latest 50 changed operations; a new edit clears redo, and successful
+R reload clears both stacks. Saving retains history. Each operation restores the
+exact affected file document; the other file is preserved. Undo/redo pauses,
+exits exchange mode, resets selection and playhead to zero, restores the selected
+clip's loop default and falls back to idle if the selected copy no longer exists.
+There is no dirty indicator; undo after saving can leave unsaved changes, so use
+Ctrl+S to persist the desired state before exiting.

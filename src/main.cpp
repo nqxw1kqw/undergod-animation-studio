@@ -65,7 +65,7 @@ std::string ExportComponent(const std::string& id){
 }
 struct Effects {bool shake=true,flash=true,particles=true,dim=true,reduced=false;};
 struct Studio {
- Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",target="frog",clip="idle",notice;
+ Library lib;EditHistory history;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",target="frog",clip="idle",notice;
  double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;int backdrop=0;bool guides=false;bool cinematicPanel=false;bool exchange=false;bool playing=true,loop=true,onion=false;Effects effects;
  ~Studio(){if(sprite>=0)DeleteGraph(sprite);if(stage>=0)DeleteGraph(stage);if(font>=0)DeleteFontToHandle(font);}
  bool Cinematic()const{return clip=="sao_roi";}
@@ -75,7 +75,7 @@ struct Studio {
  void Select(std::string a,std::string c){exchange=false;actor=std::move(a);clip=std::move(c);if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";selectedRow=0;time=0;loop=Cinematic()?false:Current().loop;playing=true;}
  void Reload(){
   try{auto next=LoadLibrary();Images nextImages;nextImages.Load(next);
-   images.handles.swap(nextImages.handles);lib=std::move(next);
+   images.handles.swap(nextImages.handles);lib=std::move(next);history.Clear();
    if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";
    time=0;notice="Reloaded clips + cinematic";noticeLeft=3;
   }catch(const std::exception& e){notice=std::string("Reload failed (previous data kept): ")+e.what();noticeLeft=0;}
@@ -302,6 +302,11 @@ struct Studio {
   if(press(KEY_INPUT_K)&&Cinematic()&&lib.cinematic.skippable){playing=false;time=Duration();loop=false;}
   bool ctrl=keys[KEY_INPUT_LCONTROL]||keys[KEY_INPUT_RCONTROL];
   if(ctrl&&press(KEY_INPUT_S)&&(cinematicPanel||!Cinematic())){std::string error;bool ok=cinematicPanel?SaveCinematic(lib,error):SaveClips(lib,error);notice=ok?(cinematicPanel?"Saved data/cinematic.json":"Saved data/clips.json"):"Save failed: "+error;noticeLeft=ok?3:0;}
+  if(ctrl&&(press(KEY_INPUT_Z)||press(KEY_INPUT_Y))){
+   bool changed=press(KEY_INPUT_Z)?history.Undo(lib):history.Redo(lib);
+   if(changed){if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";exchange=false;selectedRow=0;time=0;playing=false;loop=Cinematic()?false:Current().loop;}
+  }
+  const Library beforeEdit=lib;
   if(cinematicPanel){size_t count=lib.cinematic.steps.size();selectedRow=std::min(selectedRow,count-1);
    if(press(KEY_INPUT_UP))selectedRow=(selectedRow+count-1)%count;
    if(press(KEY_INPUT_DOWN))selectedRow=(selectedRow+1)%count;
@@ -317,6 +322,7 @@ struct Studio {
    if(selectedRow>=c.frames.size()&&(press(KEY_INPUT_LBRACKET)||press(KEY_INPUT_RBRACKET))){playing=false;selectedRow=c.frames.size()+NudgeCue(c,selectedRow-c.frames.size(),(press(KEY_INPUT_LBRACKET)?-1:1)*(shift?50.:10.));}
    if(selectedRow<c.frames.size()&&(press(KEY_INPUT_COMMA)||press(KEY_INPUT_PERIOD))){playing=false;EditFrameDuration(c,selectedRow,press(KEY_INPUT_COMMA)?-10:10);time=std::min(time,Duration());}
   }
+  history.Record(beforeEdit,lib,cinematicPanel);
   if((!ctrl&&press(KEY_INPUT_S))||button({24,664,160,36}))effects.shake=!effects.shake;
   if(press(KEY_INPUT_F)||button({194,664,160,36}))effects.flash=!effects.flash;
   if(press(KEY_INPUT_V)||button({364,664,180,36}))effects.particles=!effects.particles;

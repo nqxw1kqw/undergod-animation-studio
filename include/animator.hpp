@@ -24,6 +24,20 @@ struct Library {
     std::map<std::string,std::map<std::string,Clip>> actors;
     undergod::Timeline cinematic;
 };
+// Exact comparison includes every editable field, including cinematic parameters.
+bool SameDocument(const Library&,const Library&,bool cinematic);
+class EditHistory {
+    struct Entry {Library before,after;bool cinematic;};
+    std::vector<Entry> undo_,redo_;
+public:
+    static constexpr size_t Limit=50;
+    void Record(const Library& before,const Library& after,bool cinematic);
+    bool Undo(Library&);
+    bool Redo(Library&);
+    size_t UndoCount()const{return undo_.size();}
+    size_t RedoCount()const{return redo_.size();}
+    void Clear(){undo_.clear();redo_.clear();}
+};
 Library LoadLibrary(const std::string& root=".");
 // Transactional: assignment happens only after both files and references validate.
 bool Reload(Library& current,std::string& error,const std::string& root=".");

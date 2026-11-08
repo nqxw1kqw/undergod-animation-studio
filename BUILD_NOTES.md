@@ -170,3 +170,18 @@ unused clip suffixes, cue repair, and full document save/reload equality.
 Structural input and notices follow existing DxLib patterns and are statically
 reviewed only; Windows key definitions, interactive behavior and actual SDK
 compilation remain unverified. No game repository files were modified.
+
+Round 5 B: history_mixed_edits_exact_undo_redo_and_branch and
+history_bound_and_affected_file_isolation test mixed clip/cinematic edits,
+full-field restoration, redo, branch invalidation, no-op omission, the 50-entry
+bound, affected-file isolation and history clearing. History snapshots remain
+portable and DxLib-free. Ctrl+Z/Y dispatch, safe selection/playhead reset and
+reload integration are statically reviewed only. Windows SDK build, input,
+notices, rendering and interactive save/undo/redo still require Windows checks.
+All 23 portable RESULT groups pass, including every pre-existing test. No Windows
+build, DxLib runtime test or smoke capture was performed for this round.
+
+Round 5 app source also passes MinGW C++17 -Wall -Wextra -Wpedantic
+-fsyntax-only using temporary hand-declared DxLib stubs outside the repository,
+including the new key constants. This verifies C++ syntax only, not actual DxLib
+SDK signatures or key definitions.

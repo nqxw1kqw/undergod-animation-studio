@@ -133,6 +133,33 @@ int main(){try{
  Check(SaveClips(structural,error,tmp.path.string()),"Structural save: "+error);equal(structural,LoadLibrary(tmp.path.string()));
  Result("structural_save_reload_roundtrip");
  Check(SaveClips(edited,error,tmp.path.string()),"Restore edited fixture");
+ EditHistory history;auto working=edited;const auto initial=working;
+ auto change=[&](bool cinematic,auto operation){auto before=working;operation();history.Record(before,working,cinematic);};
+ change(false,[&]{NudgeCue(working.actors.at("chick").at("attack"),0,10);});
+ change(false,[&]{EditFrameDuration(working.actors.at("chick").at("idle"),0,10);});
+ change(true,[&]{NudgeStep(working.cinematic,2,10);});
+ change(false,[&]{InsertFrame(working.actors.at("chick").at("attack"),0);});
+ change(false,[&]{DeleteFrame(working.actors.at("chick").at("attack"),2);});
+ change(false,[&]{DuplicateClip(working,"chick","idle");});
+ const auto finalState=working;Check(history.UndoCount()==6,"Mixed history size");
+ while(history.Undo(working)){}
+ equal(initial,working);Check(SameDocument(initial,working,true),"Undo restores exact cinematic");Check(!history.Undo(working),"Empty undo");
+ while(history.Redo(working)){}
+ equal(finalState,working);Check(SameDocument(finalState,working,true),"Redo restores exact cinematic");
+ Check(history.Undo(working),"Undo before branch");change(false,[&]{EditFrameDuration(working.actors.at("chick").at("idle"),0,10);});
+ Check(!history.Redo(working),"New edit clears redo");
+ auto noOp=working;history.Record(noOp,working,false);Check(history.UndoCount()==6,"No-op omitted");
+ Result("history_mixed_edits_exact_undo_redo_and_branch");
+ history.Clear();auto boundStart=working;
+ for(size_t i=0;i<EditHistory::Limit+5;++i)change(false,[&]{EditFrameDuration(working.actors.at("chick").at("idle"),0,10);});
+ Check(history.UndoCount()==50,"History bound");size_t undone=0;while(history.Undo(working))++undone;
+ Check(undone==50&&working.actors.at("chick").at("idle").frames[0].duration==boundStart.actors.at("chick").at("idle").frames[0].duration+50,"Oldest five evicted");
+ size_t redone=0;while(history.Redo(working))++redone;Check(redone==50,"Bounded redo");
+ // Undo restores only the affected file, preserving independent changes.
+ history.Clear();auto beforeOnly=working;EditFrameDuration(working.actors.at("chick").at("idle"),0,10);history.Record(beforeOnly,working,false);
+ NudgeStep(working.cinematic,2,10);auto independent=working;Check(history.Undo(working)&&SameDocument(working,independent,true),"Affected file isolation");
+ history.Clear();Check(!history.Undo(working)&&!history.Redo(working),"Reload clear semantics");
+ Result("history_bound_and_affected_file_isolation");
  const auto saved=bytes(tmp.path/"data/clips.json");
  for(int kind=0;kind<5;++kind){auto invalid=edited;auto& c=invalid.actors.at("frog").at("idle");
   if(kind==0)c.frames[0].duration=19;

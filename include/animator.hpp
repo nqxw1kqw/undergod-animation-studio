@@ -1,8 +1,15 @@
 #pragma once
+#ifdef LoadLibrary
+#undef LoadLibrary
+#endif
 #include "quest_timeline.hpp"
 #include <map>
 #include <string>
 #include <vector>
+
+#ifdef LoadLibrary
+#undef LoadLibrary
+#endif
 
 namespace studio {
 // All timeline values use milliseconds; poses use game stage pixels and radians.

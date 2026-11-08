@@ -2,6 +2,9 @@
 #define NOMINMAX
 #endif
 #include <DxLib.h>
+#ifdef LoadLibrary
+#undef LoadLibrary
+#endif
 #include "animator.hpp"
 #include "export.hpp"
 #include <cmath>
@@ -92,16 +95,36 @@ struct Studio : ActorControls {
    notice="Exported: "+trace.generic_string()+"\n"+sheet.generic_string()+"\n"+sidecar.generic_string();noticeLeft=10;
   }catch(const std::exception& e){notice=std::string("Export failed (some files may have been written): ")+e.what();noticeLeft=0;}
  }
+ struct Colors {
+  unsigned bg = C(18, 20, 24);         // Dark slate background
+  unsigned panel = C(26, 30, 36);      // Panel background
+  unsigned panelBorder = C(44, 50, 60);// Subtle panel outline
+  unsigned surface = C(34, 38, 46);    // Button / control normal
+  unsigned surfaceHover = C(46, 52, 62);
+  unsigned active = C(52, 120, 246);    // Subtle professional studio accent (clean blue)
+  unsigned activeBg = C(30, 65, 130);
+  unsigned text = C(240, 243, 246);     // High contrast legible text
+  unsigned textDim = C(140, 148, 160);  // Secondary muted text
+  unsigned textDark = C(200, 205, 215);
+  unsigned border = C(55, 62, 74);
+  unsigned accent = C(66, 133, 244);
+  unsigned red = C(235, 87, 87);
+  unsigned green = C(46, 204, 113);
+ } colors;
  void Init(){
   lib=LoadLibrary();images.Load(lib);stage=MakeScreen(W,360,TRUE);sprite=MakeScreen(512,512,TRUE);
-  font=CreateFontToHandle("Segoe UI",19,5,DX_FONTTYPE_ANTIALIASING_4X4);
+  font=CreateFontToHandle("Segoe UI",18,4,DX_FONTTYPE_ANTIALIASING_4X4);
   if(stage<0||sprite<0||font<0)throw std::runtime_error("Cannot create stage/font");
   SetFontCharCodeFormatToHandle(DX_CHARCODEFORMAT_UTF8,font);SetDrawMode(DX_DRAWMODE_BILINEAR);
  }
- void Text(int x,int y,const std::string& text,unsigned color=0x343948){DrawStringToHandle(x,y,text.c_str(),color,font);}
+ void Text(int x,int y,const std::string& text,unsigned color=0){
+  DrawStringToHandle(x,y,text.c_str(),color==0?colors.text:color,font);
+ }
  void Button(Rect r,const std::string& text,bool on=false){
-  DrawRoundRect(r.x,r.y,r.x+r.w,r.y+r.h,7,7,on?C(79,106,91):C(225,229,218),TRUE);
-  Text(r.x+10,r.y+7,text,on?C(255,255,246):C(52,57,72));
+  // Clean flat rounded button with border
+  DrawRoundRect(r.x,r.y,r.x+r.w,r.y+r.h,4,4,on?colors.activeBg:colors.surface,TRUE);
+  DrawRoundRect(r.x,r.y,r.x+r.w,r.y+r.h,4,4,on?colors.accent:colors.border,FALSE);
+  Text(r.x+12,r.y+8,text,on?C(255,255,255):colors.textDark);
  }
  void Step(int direction){
   playing=false;double at=LocalTime();
@@ -208,15 +231,20 @@ struct Studio : ActorControls {
   if(Apply(lib,action)){exchange=false;independentPreview=action.kind!=ActorAction::SelectActor;selectedRow=0;}
  }
  void Timeline(){
-  Text(24,904,"Timeline [Tab: clip/cinematic]: Up/Down select | [ / ] cue -/+10 ms (Shift: 50) | , / . frame -/+10 ms | Ctrl+S save");
+  DrawRoundRect(20,896,W-20,H-20,6,6,colors.panel,TRUE);
+  DrawRoundRect(20,896,W-20,H-20,6,6,colors.panelBorder,FALSE);
+  Text(32,906,"TIMELINE EDITOR  [Tab: clip / cinematic]  |  [ / ] cue +/-10 ms (Shift: 50)  |  , / . frame +/-10 ms  |  Ctrl+S: Save",colors.textDim);
   if(cinematicPanel){
    const auto& steps=lib.cinematic.steps;selectedRow=std::min(selectedRow,steps.size()-1);size_t first=selectedRow>=6?selectedRow-5:0;
    for(size_t row=first;row<std::min(steps.size(),first+7);++row){const auto& q=steps[row];int y=936+int(row-first)*30;
-    if(row==selectedRow)DrawBox(20,y-2,W-20,y+26,C(220,229,211),TRUE);
-    Text(24,y,(row==selectedRow?"> ":"  ")+Fixed(q.t,1)+" ms "+CueName(q.cue)+" value="+Fixed(q.value)+" duration="+Fixed(q.duration)+" target="+(q.enemy?"enemy":"player")+" pose="+q.pose+(q.cue==undergod::Cue::Spear?(q.falling?" fall":" rise")+std::string(" from=")+Fixed(q.from_x,0)+","+Fixed(q.from_y,0)+" to="+Fixed(q.to_x,0)+","+Fixed(q.to_y,0):""));
+    if(row==selectedRow){
+     DrawRoundRect(26,y-2,W-26,y+26,4,4,colors.activeBg,TRUE);
+     DrawRoundRect(26,y-2,W-26,y+26,4,4,colors.accent,FALSE);
+    }
+    Text(32,y,(row==selectedRow?"> ":"  ")+Fixed(q.t,1)+" ms "+CueName(q.cue)+" value="+Fixed(q.value)+" duration="+Fixed(q.duration)+" target="+(q.enemy?"enemy":"player")+" pose="+q.pose+(q.cue==undergod::Cue::Spear?(q.falling?" fall":" rise")+std::string(" from=")+Fixed(q.from_x,0)+","+Fixed(q.from_y,0)+" to="+Fixed(q.to_x,0)+","+Fixed(q.to_y,0):""),row==selectedRow?C(255,255,255):colors.text);
    }return;
   }
-  if(Cinematic()){Text(24,936,"Tab: cinematic editor; choose an actor clip to edit frames/cues");return;}
+  if(Cinematic()){Text(32,940,"Tab: cinematic editor; choose an actor clip to edit frames/cues",colors.textDim);return;}
   const auto& c=Current();const size_t count=c.frames.size()+c.cues.size();
   selectedRow=std::min(selectedRow,count-1);
   const size_t first=selectedRow>=6?selectedRow-5:0;
@@ -225,32 +253,82 @@ struct Studio : ActorControls {
    if(row<c.frames.size()){const auto& f=c.frames[row];label="Frame "+std::to_string(row)+"  "+f.file+"  "+Fixed(f.duration,1)+" ms";}
    else{const auto& q=c.cues[row-c.frames.size()];label="Cue "+Fixed(q.t,1)+" ms  "+q.action;}
    int y=936+int(row-first)*30;
-   if(row==selectedRow)DrawBox(20,y-2,W-20,y+26,C(220,229,211),TRUE);
-   Text(24,y,(row==selectedRow?"> ":"  ")+label);
+   if(row==selectedRow){
+    DrawRoundRect(26,y-2,W-26,y+26,4,4,colors.activeBg,TRUE);
+    DrawRoundRect(26,y-2,W-26,y+26,4,4,colors.accent,FALSE);
+   }
+   Text(32,y,(row==selectedRow?"> ":"  ")+label,row==selectedRow?C(255,255,255):colors.text);
   }
  }
  void Draw(){
-  ClearDrawScreen();DrawBox(0,0,W,H,C(250,248,239),TRUE);
-  Text(24,18,"UNDERGOD / ANIMATION STUDIO | Active actor: "+actor);Text(750,18,"A primary | T target | X exchange | E export | R reload");
-  Button({24,58,150,36},"Chick [1]",actor=="chick");Button({184,58,150,36},"Frog [2]",actor=="frog");
-  Button({354,58,260,36},"Target [T]: "+target);Button({624,58,230,36},"Preview exchange [X]");
-  auto names=Clips();for(size_t i=0;i<names.size();++i)Button({24+int(i%9)*155,110+int(i/9)*42,145,36},names[i],clip==names[i]);
-  Text(24,176,Cinematic()?"Sao Roi / shared two-actor cinematic":actor+" / "+clip+(Current().composed?" / composed from existing frames":""));
-  Text(24,200,Help(lib));
-  World();Timeline();Text(1000,672,onion?"Onion [O]: on":"Onion [O]: off");
-  Button({24,612,150,36},playing?"Pause [Space]":"Play [Space]",playing);
-  Button({184,612,160,36},"Restart [Home]");Button({354,612,150,36},loop?"Loop [P]":"Once [P]",loop);
-  Button({514,612,100,36},"- [PgDn]");Button({624,612,100,36},"+ [PgUp]");Text(740,621,Fixed(speed)+"x");
-  Button({850,612,145,36},"< frame [Left]");Button({1005,612,155,36},"frame > [Right]");
-  const Rect toggles[]={{24,664,160,36},{194,664,160,36},{364,664,180,36},{554,664,150,36},{714,664,245,36}};
-  Button(toggles[0],"Shake [S]",effects.shake);Button(toggles[1],"Flash [F]",effects.flash);Button(toggles[2],"Particles [V]",effects.particles);Button(toggles[3],"Dim [D]",effects.dim);Button(toggles[4],"Reduced [Shift+E]",effects.reduced);
-  Text(24,708,std::string("Backdrop [B]: ")+(backdrop==0?"arena":backdrop==1?"dark":"checkerboard")+" | Guides [G]: "+(guides?"on":"off"));
+  ClearDrawScreen();
+  // Modern studio dark background
+  DrawBox(0,0,W,H,colors.bg,TRUE);
+
+  // Top Header Bar
+  DrawBox(0,0,W,44,colors.panel,TRUE);
+  DrawLine(0,44,W,44,colors.panelBorder);
+  Text(24,12,"UNDERGOD ANIMATION STUDIO",colors.text);
+  Text(310,12,"|  Actor: "+actor+"  |  Target: "+target,colors.textDim);
+  Text(780,12,"[A] Switch Actor   [T] Target   [X] Exchange   [E] Export   [R] Reload",colors.textDim);
+
+  // Actor & Action Control Row
+  Button({24,56,150,36},"Chick [1]",actor=="chick");
+  Button({184,56,150,36},"Frog [2]",actor=="frog");
+  Button({354,56,260,36},"Target [T]: "+target);
+  Button({624,56,230,36},"Preview Exchange [X]");
+
+  // Clip Selector Grid
+  auto names=Clips();
+  for(size_t i=0;i<names.size();++i)
+   Button({24+int(i%9)*155,104+int(i/9)*40,145,34},names[i],clip==names[i]);
+
+  // Mode & Description Sub-header
+  Text(24,178,Cinematic()?"Sao Roi / shared two-actor cinematic":actor+" / "+clip+(Current().composed?" / composed from existing frames":""),colors.accent);
+  Text(24,200,Help(lib),colors.textDim);
+
+  // Stage viewport border
+  DrawRoundRect(18,218,W-18,582,6,6,colors.panelBorder,FALSE);
+  World();
+
+  // Playback Controls Row
+  Button({24,606,150,36},playing?"Pause [Space]":"Play [Space]",playing);
+  Button({184,606,160,36},"Restart [Home]");
+  Button({354,606,150,36},loop?"Loop [P]":"Once [P]",loop);
+  Button({514,606,100,36},"- [PgDn]");
+  Button({624,606,100,36},"+ [PgUp]");
+  Text(736,614,Fixed(speed)+"x",colors.accent);
+  Button({850,606,145,36},"< Frame [Left]");
+  Button({1005,606,155,36},"Frame > [Right]");
+
+  // Effects & Options Row
+  const Rect toggles[]={{24,654,160,36},{194,654,160,36},{364,654,180,36},{554,654,150,36},{714,654,245,36}};
+  Button(toggles[0],"Shake [S]",effects.shake);
+  Button(toggles[1],"Flash [F]",effects.flash);
+  Button(toggles[2],"Particles [V]",effects.particles);
+  Button(toggles[3],"Dim [D]",effects.dim);
+  Button(toggles[4],"Reduced [Shift+E]",effects.reduced);
+  Text(980,662,onion?"Onion Skin [O]: ON":"Onion Skin [O]: OFF",onion?colors.accent:colors.textDim);
+
+  // Status & View Options
+  Text(24,698,std::string("Backdrop [B]: ")+(backdrop==0?"Arena":backdrop==1?"Dark":"Grid")+"  |  Guides [G]: "+(guides?"ON":"OFF"),colors.textDim);
+
+  // Timeline Track / Scrub Bar
   const double impact=Cinematic()?ImpactTime(lib.cinematic):ImpactTime(Current());
-  const double u=std::clamp(LocalTime()/Duration(),0.,1.);DrawBox(48,740,W-48,750,C(207,217,200),TRUE);DrawBox(48,740,48+int((W-96)*u),750,C(79,106,91),TRUE);DrawCircle(48+int((W-96)*u),745,8,C(79,106,91),TRUE);
-  int impactX=48+int((W-96)*impact/Duration());DrawLine(impactX,730,impactX,760,C(190,85,80),2);Text(impactX-25,708,"impact");
+  const double u=std::clamp(LocalTime()/Duration(),0.,1.);
+  // Track groove
+  DrawRoundRect(48,728,W-48,738,4,4,C(38,44,54),TRUE);
+  DrawRoundRect(48,728,48+int((W-96)*u),738,4,4,colors.accent,TRUE);
+  DrawCircle(48+int((W-96)*u),733,7,colors.text,TRUE);
+
+  int impactX=48+int((W-96)*impact/Duration());
+  DrawLine(impactX,720,impactX,746,colors.red,2);
+  Text(impactX-24,702,"impact",colors.red);
+
   size_t frame=Cinematic()?SampleCinematic(lib,LocalTime(),actor,target).player.frame:SamplePose(Current(),time,loop).frame;
   const size_t lastFrame=Cinematic()?lib.actors.at(actor).at(SampleCinematic(lib,LocalTime(),actor,target).playerClip).frames.size()-1:Current().frames.size()-1;
-  Text(24,774,"Time "+Fixed(LocalTime()/1000,3)+" / "+Fixed(Duration()/1000,3)+" s   |   frame "+std::to_string(frame)+" / "+std::to_string(lastFrame)+"   |   "+(playing?"playing":"paused"));
+  Text(24,750,"Time "+Fixed(LocalTime()/1000,3)+" / "+Fixed(Duration()/1000,3)+" s   |   Frame "+std::to_string(frame)+" / "+std::to_string(lastFrame)+"   |   "+(playing?"playing":"paused"),colors.text);
+
   std::string cueText;
   if(Cinematic()){
    const double at=LocalTime();
@@ -269,47 +347,52 @@ struct Studio : ActorControls {
     if(on)cueText+=CueName(s.cue)+" ";
    }
   }else for(const auto& a:ActiveCues())cueText+=a.cue->action+" ";
-  Text(24,803,"Active cues: "+(cueText.empty()?"none":cueText));
-  Text(24,832,"Drag to scrub | J: restart/pause | L: faster/resume | P: loop/once | End: last | K: skip | Esc: exit");
+  Text(24,776,"Active cues: "+(cueText.empty()?"none":cueText),colors.textDim);
+  Text(24,802,"Drag scrub bar | J: Restart | L: Speed | P: Loop | End: Last Frame | K: Skip Cinematic | Esc: Exit",colors.textDim);
+
+  Timeline();
+
   if(!notice.empty()){
-   // Multi-line notices temporarily cover the editor beneath them.
+   // Clean modal/toast notice box
    size_t lineCount=0;std::istringstream measure(notice);std::string measured;
    while(std::getline(measure,measured))lineCount+=std::max(size_t(1),(measured.size()+119)/120);
-   DrawBox(20,860,W-20,std::min(H-12,864+int(std::min(lineCount,size_t(12)))*24),C(250,248,239),TRUE);
-   std::istringstream lines(notice);std::string line;int y=864;
+   int boxH=int(std::min(lineCount,size_t(12)))*24+20;
+   DrawRoundRect(20,840,W-20,std::min(H-12,840+boxH),6,6,colors.panel,TRUE);
+   DrawRoundRect(20,840,W-20,std::min(H-12,840+boxH),6,6,notice.find("failed")!=std::string::npos?colors.red:colors.accent,FALSE);
+   std::istringstream lines(notice);std::string line;int y=852;
    while(std::getline(lines,line)&&y<H-24){
     for(size_t offset=0;offset<line.size()&&y<H-24;offset+=120,y+=24)
-     Text(24,y,line.substr(offset,120),notice.find("failed")!=std::string::npos?C(180,65,70):C(70,120,80));
+     Text(32,y,line.substr(offset,120),notice.find("failed")!=std::string::npos?colors.red:colors.green);
    }
   }
  }
  void Input(const char* keys,const char* previous,int mx,int my,bool clicked,bool held){
   auto press=[&](int k){return keys[k]&&!previous[k];};
   auto button=[&](Rect r){return clicked&&r.Has(mx,my);};
-  if(press(KEY_INPUT_1)||button({24,58,150,36}))Action({ActorAction::SelectActor,0,"chick"});
-  if(press(KEY_INPUT_2)||button({184,58,150,36}))Action({ActorAction::SelectActor,0,"frog"});
+  if(press(KEY_INPUT_1)||button({24,56,150,36}))Action({ActorAction::SelectActor,0,"chick"});
+  if(press(KEY_INPUT_2)||button({184,56,150,36}))Action({ActorAction::SelectActor,0,"frog"});
   if(press(KEY_INPUT_A)){
    auto next=lib.actors.find(actor);if(++next==lib.actors.end())next=lib.actors.begin();Select(next->first,clip);
   }
-  if(press(KEY_INPUT_T)||button({354,58,260,36})){auto next=lib.actors.find(target);if(++next==lib.actors.end())next=lib.actors.begin();target=next->first;time=0;}
-  if(press(KEY_INPUT_X)||button({624,58,230,36})){Select(actor,"attack");exchange=true;loop=false;}
+  if(press(KEY_INPUT_T)||button({354,56,260,36})){auto next=lib.actors.find(target);if(++next==lib.actors.end())next=lib.actors.begin();target=next->first;time=0;}
+  if(press(KEY_INPUT_X)||button({624,56,230,36})){Select(actor,"attack");exchange=true;loop=false;}
   const int slotKeys[]={KEY_INPUT_F1,KEY_INPUT_F2,KEY_INPUT_F3,KEY_INPUT_F4,KEY_INPUT_F5,KEY_INPUT_F6};
   for(int i=0;i<6;++i)if(press(slotKeys[i]))Action({ActorAction::AnimationSlot,i+1,{}});
   if(press(KEY_INPUT_C))Action({ActorAction::Cinematic,0,{}});
   const auto names=Clips();
   if(press(KEY_INPUT_TAB)){cinematicPanel=!cinematicPanel;selectedRow=0;}
-  for(size_t i=0;i<names.size();++i)if(button({24+int(i%9)*155,110+int(i/9)*42,145,36}))Select(actor,names[i]);
-  if(press(KEY_INPUT_SPACE)||button({24,612,150,36})){if(!playing&&!loop&&time>=Duration())time=0;playing=!playing;}
+  for(size_t i=0;i<names.size();++i)if(button({24+int(i%9)*155,104+int(i/9)*40,145,34}))Select(actor,names[i]);
+  if(press(KEY_INPUT_SPACE)||button({24,606,150,36})){if(!playing&&!loop&&time>=Duration())time=0;playing=!playing;}
   if(press(KEY_INPUT_J)){time=0;playing=false;}
   if(press(KEY_INPUT_L)){speed=NextSpeed(speed);playing=true;}
-  if(press(KEY_INPUT_HOME)||button({184,612,160,36}))time=0;
-  if(press(KEY_INPUT_P)||button({354,612,150,36})){time=LocalTime();loop=!loop;}
-  if(press(KEY_INPUT_PGDN)||button({514,612,100,36}))speed=std::max(.25,speed-.25);
-  if(press(KEY_INPUT_PGUP)||button({624,612,100,36}))speed=std::min(3.,speed+.25);
+  if(press(KEY_INPUT_HOME)||button({184,606,160,36}))time=0;
+  if(press(KEY_INPUT_P)||button({354,606,150,36})){time=LocalTime();loop=!loop;}
+  if(press(KEY_INPUT_PGDN)||button({514,606,100,36}))speed=std::max(.25,speed-.25);
+  if(press(KEY_INPUT_PGUP)||button({624,606,100,36}))speed=std::min(3.,speed+.25);
   bool shift=keys[KEY_INPUT_LSHIFT]||keys[KEY_INPUT_RSHIFT];
-  if(press(KEY_INPUT_LEFT)||button({850,612,145,36})){if(shift){playing=false;time=std::max(0.,LocalTime()-50);}else Step(-1);}
-  if(press(KEY_INPUT_RIGHT)||button({1005,612,155,36})){if(shift){playing=false;time=std::min(Duration(),LocalTime()+50);}else Step(1);}
-  if(press(KEY_INPUT_END)){playing=false;time=Duration();if(loop)time=std::max(0.,time-.001);}
+  if(press(KEY_INPUT_LEFT)||button({850,606,145,36})){if(shift){playing=false;time=std::max(0.,LocalTime()-50);}else Step(-1);}
+  if(press(KEY_INPUT_RIGHT)||button({1005,606,155,36})){if(shift){playing=false;time=std::min(Duration(),LocalTime()+50);}else Step(1);}
+  if(press(KEY_INPUT_END)){playing=false;time=Duration();if(loop)time=std::max(0.,time-.001);}\
   if(press(KEY_INPUT_K)&&Cinematic()&&lib.cinematic.skippable){playing=false;time=Duration();loop=false;}
   bool ctrl=keys[KEY_INPUT_LCONTROL]||keys[KEY_INPUT_RCONTROL];
   if(ctrl&&press(KEY_INPUT_S)&&(cinematicPanel||!Cinematic())){std::string error;bool ok=cinematicPanel?SaveCinematic(lib,error):SaveClips(lib,error);notice=ok?(cinematicPanel?"Saved data/cinematic.json":"Saved data/clips.json"):"Save failed: "+error;noticeLeft=ok?3:0;}
@@ -334,13 +417,13 @@ struct Studio : ActorControls {
    if(selectedRow<c.frames.size()&&(press(KEY_INPUT_COMMA)||press(KEY_INPUT_PERIOD))){playing=false;EditFrameDuration(c,selectedRow,press(KEY_INPUT_COMMA)?-10:10);time=std::min(time,Duration());}
   }
   history.Record(beforeEdit,lib,cinematicPanel);
-  if((!ctrl&&press(KEY_INPUT_S))||button({24,664,160,36}))effects.shake=!effects.shake;
-  if(press(KEY_INPUT_F)||button({194,664,160,36}))effects.flash=!effects.flash;
-  if(press(KEY_INPUT_V)||button({364,664,180,36}))effects.particles=!effects.particles;
-  if((!ctrl&&press(KEY_INPUT_D))||button({554,664,150,36}))effects.dim=!effects.dim;
-  if((shift&&press(KEY_INPUT_E))||button({714,664,245,36}))effects.reduced=!effects.reduced;
+  if((!ctrl&&press(KEY_INPUT_S))||button({24,654,160,36}))effects.shake=!effects.shake;
+  if(press(KEY_INPUT_F)||button({194,654,160,36}))effects.flash=!effects.flash;
+  if(press(KEY_INPUT_V)||button({364,654,180,36}))effects.particles=!effects.particles;
+  if((!ctrl&&press(KEY_INPUT_D))||button({554,654,150,36}))effects.dim=!effects.dim;
+  if((shift&&press(KEY_INPUT_E))||button({714,654,245,36}))effects.reduced=!effects.reduced;
   if(!shift&&press(KEY_INPUT_E))Export();
-  if(held&&Rect{48,725,W-96,40}.Has(mx,my)){playing=false;time=Duration()*std::clamp(double(mx-48)/(W-96),0.,1.);if(loop&&time==Duration())time-=.001;}
+  if(held&&Rect{48,715,W-96,40}.Has(mx,my)){playing=false;time=Duration()*std::clamp(double(mx-48)/(W-96),0.,1.);if(loop&&time==Duration())time-=.001;}
   if(press(KEY_INPUT_B))backdrop=(backdrop+1)%3;
   if(press(KEY_INPUT_G))guides=!guides;
   if(press(KEY_INPUT_O))onion=!onion;

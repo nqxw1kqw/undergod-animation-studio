@@ -11,6 +11,9 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#ifdef LoadLibrary
+#undef LoadLibrary
+#endif
 #endif
 
 namespace studio {

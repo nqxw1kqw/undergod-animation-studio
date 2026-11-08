@@ -147,5 +147,21 @@ int main(){try{
  Check(ImpactTime(single)==20,"Missing cue defaults to end");
  Check(ImpactTime(lib.cinematic)==2600&&TargetReaction(lib,"frog",3100,2600,true).clip=="defeat","Cinematic hit then defeat");
  Result("dual_actor_impact_offsets_and_exchange");
+ auto timeline=lib.cinematic;auto sel=NudgeStep(timeline,2,-10000);Check(timeline.steps[sel].t==0&&timeline.steps[sel].cue==Cue::Pose,"Step lower clamp and identity");
+ sel=NudgeStep(timeline,sel,10000);Check(timeline.steps[sel].t==3600&&timeline.steps[sel].cue==Cue::Pose,"Step upper clamp and identity");
+ Result("cinematic_nudge_clamp_selection");
+ auto ce=LoadLibrary(tmp.path.string());NudgeStep(ce.cinematic,2,10);
+ Check(SaveCinematic(ce,error,tmp.path.string()),"Cinematic save: "+error);
+ auto cr=LoadLibrary(tmp.path.string());Check(undergod::SerializeTimeline(cr.cinematic)==undergod::SerializeTimeline(ce.cinematic),"All cinematic fields roundtrip");
+ Result("cinematic_save_reload_roundtrip");
+ const auto cb=bytes(tmp.path/"data/cinematic.json");
+ for(int kind=0;kind<4;++kind){auto bad=ce;
+  if(kind==0)for(auto& q:bad.cinematic.steps)if(q.cue==Cue::Impact)q.t+=10;
+  if(kind==1)bad.cinematic.steps.back().t=0;
+  if(kind==2)bad.cinematic.steps[0].value=2;
+  if(kind==3)bad.cinematic.steps[0].t=std::nanf("");
+  Check(!SaveCinematic(bad,error,tmp.path.string())&&!error.empty(),"Invalid cinematic save refused");Check(bytes(tmp.path/"data/cinematic.json")==cb,"Cinematic failure byte preservation");
+ }
+ Result("cinematic_invalid_save_preserves_file_bytes");
  return 0;
  }catch(const std::exception& e){std::cerr<<"RESULT portable FAIL: "<<e.what()<<'\n';return 1;}}

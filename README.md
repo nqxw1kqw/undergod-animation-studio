@@ -68,7 +68,7 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 | --- | --- |
 | 1 / 2 | Select chick / frog, retaining the clip if available, otherwise idle |
 | A | Cycle actors (also includes actors added to the catalog) |
-| Tab | Cycle all clips and sao_roi |
+| Tab | Switch timeline panel between current clip and cinematic; choose clips with buttons |
 | Space | Play / pause; playing again from a finished nonlooping clip restarts it |
 | Home | Restart at zero, retaining play/pause state |
 | L | Toggle looping, retaining local time |
@@ -129,9 +129,14 @@ replaces `data/clips.json`. On failure the destination stays untouched and a
 persistent error appears; successful save makes in-memory clips match reload.
 Edits remain in memory until saved; R discards them by reloading the runtime
 files. Save before switching away or exiting if you want to retain your edits;
-switching clips itself retains edits. Cinematic rows are read-only and Ctrl+S
-there does nothing. `cinematic.json` is never written. Copy saved runtime
-`clips.json` back to repo `data/` before rebuilding if you want it in source control.
+switching clips itself retains edits. Tab switches the panel to cinematic steps (time, action and parameters). Up/Down
+selects a step; [ / ] nudges it by 10 ms, or 50 ms with Shift, clamped to
+[0, current cinematic duration], with stable sorting and selection retention.
+Ctrl+S saves the panel's file transactionally after validation. Moving impact or
+spear fall alone can violate contact timing; adjust both before saving. Invalid
+edits remain visible in memory, the error persists, and disk bytes stay untouched.
+R discards edits. Copy saved runtime JSONs back to repo data/ before rebuilding.
+
 
 ## Layout
 

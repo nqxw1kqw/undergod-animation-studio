@@ -125,3 +125,10 @@ Round 3 A: portable `dual_actor_impact_offsets_and_exchange` checks delivered
 attack offsets, reaction boundaries, idle return, missing-cue default and cinematic
 hit/defeat timing. Dual actor drawing, pickers, facing and X remain Windows-only,
 statically reviewed; no actual DxLib build or interactive test was performed.
+
+Round 3 B adds RESULT groups `cinematic_nudge_clamp_selection`,
+`cinematic_save_reload_roundtrip`, and
+`cinematic_invalid_save_preserves_file_bytes`. They cover both clamp endpoints,
+selection through stable sorting, all serialized step fields, contact/end/range/
+nonfinite rejection and destination preservation. Cinematic step panel, Tab,
+Ctrl+S notices and Windows atomic replacement remain statically verified only.

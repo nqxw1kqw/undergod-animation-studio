@@ -86,6 +86,28 @@ Library LoadLibrary(const std::string& root){
     std::ifstream f(root+"/data/clips.json");Require(bool(f),"Cannot open data/clips.json");Json j;f>>j;
     return ParseLibrary(j,root);
 }
+size_t NudgeStep(undergod::Timeline& t,size_t index,double delta){
+    Require(std::isfinite(delta),"Invalid step delta");const double end=CinematicDuration(t);
+    t.steps.at(index).t=float(std::clamp(double(t.steps.at(index).t)+delta,0.,end));
+    std::vector<size_t> order;for(size_t i=0;i<t.steps.size();++i)order.push_back(i);
+    std::stable_sort(order.begin(),order.end(),[&](size_t a,size_t b){return t.steps[a].t<t.steps[b].t;});
+    auto old=t.steps;size_t selected=0;for(size_t i=0;i<order.size();++i){t.steps[i]=old[order[i]];if(order[i]==index)selected=i;}return selected;
+}
+bool SaveCinematic(Library& current,std::string& error,const std::string& root){
+    const auto target=std::filesystem::path(root)/"data/cinematic.json",temp=std::filesystem::path(root)/"data/cinematic.json.tmp";bool created=false;
+    try{
+        const auto text=undergod::SerializeTimeline(current.cinematic);auto validated=undergod::ParseTimelineText(text);
+        for(const auto& s:validated.steps)if(s.cue==undergod::Cue::Pose)Require(current.actors.at(s.enemy?"frog":"chick").count(s.pose),"Missing cinematic clip");
+        Require(!std::filesystem::exists(temp),"Save temporary file already exists");
+        {std::ofstream out(temp,std::ios::binary);created=true;Require(bool(out),"Cannot create temporary file");out<<text;out.flush();Require(bool(out),"Cannot write temporary file");out.close();Require(bool(out),"Cannot close temporary file");}
+#ifdef _WIN32
+        Require(MoveFileExW(temp.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=0,"Cannot replace cinematic.json");
+#else
+        Require(std::rename(temp.c_str(),target.c_str())==0,"Cannot replace cinematic.json");
+#endif
+        current.cinematic=std::move(validated);error.clear();return true;
+    }catch(const std::exception& e){if(created){std::error_code ignored;std::filesystem::remove(temp,ignored);}error=e.what();return false;}
+}
 size_t NudgeCue(Clip& c,size_t index,double delta){
     Require(std::isfinite(delta),"Invalid cue delta");
     c.cues.at(index).t=std::clamp(c.cues.at(index).t+delta,0.,c.Duration());

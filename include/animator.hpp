@@ -27,6 +27,8 @@ struct Library {
 Library LoadLibrary(const std::string& root=".");
 // Transactional: assignment happens only after both files and references validate.
 bool Reload(Library& current,std::string& error,const std::string& root=".");
+size_t NudgeStep(undergod::Timeline&,size_t,double);
+bool SaveCinematic(Library&,std::string& error,const std::string& root=".");
 size_t NudgeCue(Clip&,size_t index,double delta);
 void EditFrameDuration(Clip&,size_t index,double delta);
 bool SaveClips(Library&,std::string& error,const std::string& root=".");

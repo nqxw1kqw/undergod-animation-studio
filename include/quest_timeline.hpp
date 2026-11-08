@@ -8,6 +8,8 @@ enum class Cue { Dim,Zoom,Pose,Vfx,Spear,Shake,Impact,Flash,End };
 struct Step { float t=0; Cue cue=Cue::End; float value=0,duration=0; bool enemy=false; std::string pose="ult_charge"; bool falling=false; float from_x=0,from_y=0,to_x=0,to_y=0; };
 struct Timeline { std::vector<Step> steps; bool skippable=true; };
 Timeline LoadTimeline(const std::string& file="data/cinematic.json");
+Timeline ParseTimelineText(const std::string&);
+std::string SerializeTimeline(const Timeline&);
 class TimelinePlayer {
     Timeline timeline_;size_t cursor_=0;bool done_=true,impacted_=false;
     std::function<void(const Step&)> cue_;

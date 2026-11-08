@@ -3,13 +3,15 @@
 #include "../third_party/nlohmann/json.hpp"
 #include <fstream>
 #include <cmath>
+#include <sstream>
 #include <stdexcept>
 namespace undergod {
 namespace { using Json=nlohmann::json;
 Json Read(const std::string& path){std::ifstream f(path);if(!f)throw std::runtime_error("Cannot open "+path);Json j;f>>j;return j;}
 }
-Timeline LoadTimeline(const std::string& file){
-    const auto j=Read(file);Timeline timeline;timeline.skippable=j.value("skippable",true);int impacts=0,ends=0,falls=0;float impact_time=0,end_time=0,fall_end=0;
+Timeline LoadTimeline(const std::string& file){return ParseTimelineText(Read(file).dump());}
+Timeline ParseTimelineText(const std::string& text){
+    const auto j=Json::parse(text);Timeline timeline;timeline.skippable=j.value("skippable",true);int impacts=0,ends=0,falls=0;float impact_time=0,end_time=0,fall_end=0;
     for(const auto& s:j.at("steps")){
         Step step;step.t=s.at("t");const std::string action=s.at("action");
         if(action=="dimScreen"){step.cue=Cue::Dim;step.value=s.at("alpha");}
@@ -47,4 +49,27 @@ Timeline LoadTimeline(const std::string& file){
     }
     return timeline;
 }
+std::string SerializeTimeline(const Timeline& timeline){
+    Json j={{"id","sao_roi"},{"skippable",timeline.skippable},{"steps",Json::array()}};
+    for(const auto& s:timeline.steps){
+        Json v={{"t",s.t}};
+        switch(s.cue){
+        case Cue::Dim:v["action"]="dimScreen";v["alpha"]=s.value;break;
+        case Cue::Zoom:v["action"]="cameraZoom";v["to"]=s.value;v["duration"]=s.duration;break;
+        case Cue::Pose:v["action"]="playSprite";v["target"]=s.enemy?"enemy":"player";v["anim"]=s.pose;break;
+        case Cue::Vfx:v["action"]="spawnVFX";v["sheet"]="vfx/spear_impact.png";v["at"]=s.enemy?"enemy":"player";v["frames"]=s.value;break;
+        case Cue::Spear:v["action"]="moveSpear";v["phase"]=s.falling?"fall":"rise";v["from"]={s.from_x,s.from_y};v["to"]={s.to_x,s.to_y};v["duration"]=s.duration;break;
+        case Cue::Shake:v["action"]="shake";v["intensity"]=s.value;v["duration"]=s.duration;break;
+        case Cue::Impact:v["action"]="impact";v["callback"]="applyDamage";break;
+        case Cue::Flash:v["action"]="flashWhite";v["duration"]=s.duration;break;
+        case Cue::End:v["action"]="end";break;
+        default:throw std::runtime_error("Unknown cinematic cue");
+        }
+        // JSON would silently turn NaN into null, so reject all fields first.
+        for(float n:{s.t,s.value,s.duration,s.from_x,s.from_y,s.to_x,s.to_y})if(!std::isfinite(n))throw std::runtime_error("Invalid cinematic number");
+        j["steps"].push_back(v);
+    }
+    return j.dump(2)+"\n";
+}
+
 }

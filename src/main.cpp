@@ -42,7 +42,7 @@ struct Images {
 struct Effects {bool shake=true,flash=true,particles=true,dim=true,reduced=false;};
 struct Studio {
  Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",target="frog",clip="idle",notice;
- double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;int backdrop=0;bool guides=false;bool exchange=false;bool playing=true,loop=true,onion=false;Effects effects;
+ double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;int backdrop=0;bool guides=false;bool cinematicPanel=false;bool exchange=false;bool playing=true,loop=true,onion=false;Effects effects;
  ~Studio(){if(sprite>=0)DeleteGraph(sprite);if(stage>=0)DeleteGraph(stage);if(font>=0)DeleteFontToHandle(font);}
  bool Cinematic()const{return clip=="sao_roi";}
  const Clip& Current()const{return lib.actors.at(actor).at(clip);}
@@ -165,8 +165,15 @@ struct Studio {
  }
  std::vector<std::string> Clips()const{std::vector<std::string> names;for(const auto& c:lib.actors.at(actor))names.push_back(c.first);names.push_back("sao_roi");return names;}
  void Timeline(){
-  Text(24,904,"Timeline: Up/Down select | [ / ] cue -/+10 ms (Shift: 50) | , / . frame -/+10 ms | Ctrl+S save");
-  if(Cinematic()){Text(24,936,"Cinematic is read-only");return;}
+  Text(24,904,"Timeline [Tab: clip/cinematic]: Up/Down select | [ / ] cue -/+10 ms (Shift: 50) | , / . frame -/+10 ms | Ctrl+S save");
+  if(cinematicPanel){
+   const auto& steps=lib.cinematic.steps;selectedRow=std::min(selectedRow,steps.size()-1);size_t first=selectedRow>=6?selectedRow-5:0;
+   for(size_t row=first;row<std::min(steps.size(),first+7);++row){const auto& q=steps[row];int y=936+int(row-first)*30;
+    if(row==selectedRow)DrawBox(20,y-2,W-20,y+26,C(220,229,211),TRUE);
+    Text(24,y,(row==selectedRow?"> ":"  ")+Fixed(q.t,1)+" ms "+CueName(q.cue)+" value="+Fixed(q.value)+" duration="+Fixed(q.duration)+" target="+(q.enemy?"enemy":"player")+" pose="+q.pose+(q.falling?" fall":""));
+   }return;
+  }
+  if(Cinematic()){Text(24,936,"Tab: cinematic editor; choose an actor clip to edit frames/cues");return;}
   const auto& c=Current();const size_t count=c.frames.size()+c.cues.size();
   selectedRow=std::min(selectedRow,count-1);
   const size_t first=selectedRow>=6?selectedRow-5:0;
@@ -231,7 +238,7 @@ struct Studio {
   if(press(KEY_INPUT_T)||button({354,58,260,36})){auto next=lib.actors.find(target);if(++next==lib.actors.end())next=lib.actors.begin();target=next->first;time=0;}
   if(press(KEY_INPUT_X)||button({624,58,230,36})){Select(actor,"attack");exchange=true;loop=false;}
   const auto names=Clips();
-  if(press(KEY_INPUT_TAB)){auto i=std::find(names.begin(),names.end(),clip)-names.begin();Select(actor,names[(i+1)%names.size()]);}
+  if(press(KEY_INPUT_TAB)){cinematicPanel=!cinematicPanel;selectedRow=0;}
   for(size_t i=0;i<names.size();++i)if(button({24+int(i%9)*155,110+int(i/9)*42,145,36}))Select(actor,names[i]);
   if(press(KEY_INPUT_SPACE)||button({24,612,150,36})){if(!playing&&!loop&&time>=Duration())time=0;playing=!playing;}
   if(press(KEY_INPUT_HOME)||button({184,612,160,36}))time=0;
@@ -244,8 +251,13 @@ struct Studio {
   if(press(KEY_INPUT_END)){playing=false;time=Duration();if(loop)time=std::max(0.,time-.001);}
   if(press(KEY_INPUT_K)&&Cinematic()&&lib.cinematic.skippable){playing=false;time=Duration();loop=false;}
   bool ctrl=keys[KEY_INPUT_LCONTROL]||keys[KEY_INPUT_RCONTROL];
-  if(ctrl&&press(KEY_INPUT_S)&&!Cinematic()){std::string error;bool ok=SaveClips(lib,error);notice=ok?"Saved data/clips.json":"Save failed: "+error;noticeLeft=ok?3:0;}
-  if(!Cinematic()){
+  if(ctrl&&press(KEY_INPUT_S)&&(cinematicPanel||!Cinematic())){std::string error;bool ok=cinematicPanel?SaveCinematic(lib,error):SaveClips(lib,error);notice=ok?(cinematicPanel?"Saved data/cinematic.json":"Saved data/clips.json"):"Save failed: "+error;noticeLeft=ok?3:0;}
+  if(cinematicPanel){size_t count=lib.cinematic.steps.size();selectedRow=std::min(selectedRow,count-1);
+   if(press(KEY_INPUT_UP))selectedRow=(selectedRow+count-1)%count;
+   if(press(KEY_INPUT_DOWN))selectedRow=(selectedRow+1)%count;
+   if(press(KEY_INPUT_LBRACKET)||press(KEY_INPUT_RBRACKET)){playing=false;selectedRow=NudgeStep(lib.cinematic,selectedRow,(press(KEY_INPUT_LBRACKET)?-1:1)*(shift?50.:10.));time=std::min(time,Duration());}
+  }
+  if(!cinematicPanel&&!Cinematic()){
    auto& c=lib.actors.at(actor).at(clip);size_t count=c.frames.size()+c.cues.size();selectedRow=std::min(selectedRow,count-1);
    if(press(KEY_INPUT_UP))selectedRow=(selectedRow+count-1)%count;
    if(press(KEY_INPUT_DOWN))selectedRow=(selectedRow+1)%count;

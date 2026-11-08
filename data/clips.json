@@ -108,6 +108,12 @@
             "duration": 950,
             "value": 12,
             "text": "12"
+          },
+          {
+            "t": 320,
+            "action": "impact",
+            "duration": 1,
+            "value": 0
           }
         ]
       },
@@ -355,6 +361,12 @@
             "duration": 500,
             "value": 1.03,
             "text": ""
+          },
+          {
+            "t": 250.0,
+            "action": "impact",
+            "duration": 1,
+            "value": 0
           }
         ]
       },
@@ -379,7 +391,14 @@
           }
         ],
         "tracks": {},
-        "cues": []
+        "cues": [
+          {
+            "t": 500.0,
+            "action": "impact",
+            "duration": 1,
+            "value": 0
+          }
+        ]
       },
       "defeat": {
         "loop": false,
@@ -786,6 +805,12 @@
             "duration": 950,
             "value": 12,
             "text": "12"
+          },
+          {
+            "t": 320,
+            "action": "impact",
+            "duration": 1,
+            "value": 0
           }
         ]
       },
@@ -1033,6 +1058,12 @@
             "duration": 500,
             "value": 1.03,
             "text": ""
+          },
+          {
+            "t": 250.0,
+            "action": "impact",
+            "duration": 1,
+            "value": 0
           }
         ]
       },

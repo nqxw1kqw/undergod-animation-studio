@@ -139,5 +139,13 @@ int main(){try{
  Clip single;single.frames={{"unused",20}};for(bool loop:{false,true}){auto n=NeighborFrames(single,0,loop);Check(n.previous==0&&n.next==0,"Single-frame neighbors");}
  bool rejected=false;try{NeighborFrames(single,1,true);}catch(const std::exception&){rejected=true;}Check(rejected,"Invalid neighbor index rejected");
  Result("onion_skin_loop_aware_frame_neighbors");
+ for(const auto& a:lib.actors)for(const auto& name:{"attack","ult_charge","ult_throw"})if(a.second.count(name)){
+  const auto& c=a.second.at(name);double impact=ImpactTime(c);bool found=false;for(const auto& q:c.cues)if(q.action=="impact"){Check(impact==q.t,"Cue offset");found=true;}Check(found,"Delivered attacks have impact");
+  Check(TargetReaction(lib,"frog",impact-1,impact).clip=="idle"&&TargetReaction(lib,"frog",impact,impact).clip=="hit","Reaction boundary");
+  Check(TargetReaction(lib,"frog",ExchangeDuration(lib,a.first,"frog",name),impact).clip=="idle","Exchange returns idle");
+ }
+ Check(ImpactTime(single)==20,"Missing cue defaults to end");
+ Check(ImpactTime(lib.cinematic)==2600&&TargetReaction(lib,"frog",3100,2600,true).clip=="defeat","Cinematic hit then defeat");
+ Result("dual_actor_impact_offsets_and_exchange");
  return 0;
  }catch(const std::exception& e){std::cerr<<"RESULT portable FAIL: "<<e.what()<<'\n';return 1;}}

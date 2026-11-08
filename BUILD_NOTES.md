@@ -120,3 +120,8 @@ The new work is the clip schema/catalog, track and interval samplers, validation
 stateless cinematic visual reconstruction, studio UI/transport, transactional
 reload and portable tests. No game combat code or DxLib dependency enters the
 portable core. No new art was created.
+
+Round 3 A: portable `dual_actor_impact_offsets_and_exchange` checks delivered
+attack offsets, reaction boundaries, idle return, missing-cue default and cinematic
+hit/defeat timing. Dual actor drawing, pickers, facing and X remain Windows-only,
+statically reviewed; no actual DxLib build or interactive test was performed.

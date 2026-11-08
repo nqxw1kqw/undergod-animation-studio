@@ -41,14 +41,14 @@ struct Images {
 };
 struct Effects {bool shake=true,flash=true,particles=true,dim=true,reduced=false;};
 struct Studio {
- Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",clip="idle",notice;
- double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;int backdrop=0;bool guides=false;bool playing=true,loop=true,onion=false;Effects effects;
+ Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",target="frog",clip="idle",notice;
+ double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;int backdrop=0;bool guides=false;bool exchange=false;bool playing=true,loop=true,onion=false;Effects effects;
  ~Studio(){if(sprite>=0)DeleteGraph(sprite);if(stage>=0)DeleteGraph(stage);if(font>=0)DeleteFontToHandle(font);}
  bool Cinematic()const{return clip=="sao_roi";}
  const Clip& Current()const{return lib.actors.at(actor).at(clip);}
  double Duration()const{return Cinematic()?CinematicDuration(lib.cinematic):Current().Duration();}
- double LocalTime()const{return loop?std::fmod(time,Duration()):std::min(time,Duration());}
- void Select(std::string a,std::string c){actor=std::move(a);clip=std::move(c);if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";selectedRow=0;time=0;loop=Cinematic()?false:Current().loop;playing=true;}
+ double LocalTime()const{if(exchange)return time;return loop?std::fmod(time,Duration()):std::min(time,Duration());}
+ void Select(std::string a,std::string c){exchange=false;actor=std::move(a);clip=std::move(c);if(!Cinematic()&&!lib.actors.at(actor).count(clip))clip="idle";selectedRow=0;time=0;loop=Cinematic()?false:Current().loop;playing=true;}
  void Reload(){
   try{auto next=LoadLibrary();Images nextImages;nextImages.Load(next);
    images.handles.swap(nextImages.handles);lib=std::move(next);
@@ -88,7 +88,7 @@ struct Studio {
    SetDrawScreen(stage);graph=sprite;
   }
   SetDrawBright(int(p.r),int(p.g),int(p.b));
-  auto draw=[&](int graph,double alpha){Blend(alpha);DrawRotaGraph3F(float(home+p.x),float(320+p.y),256,456,p.scale*.5,p.scale*.5,p.rotation,graph,TRUE,who=="frog"?TRUE:FALSE);};
+  auto draw=[&](int graph,double alpha){Blend(alpha);DrawRotaGraph3F(float(home+p.x),float(320+p.y),256,456,p.scale*.5,p.scale*.5,p.rotation,graph,TRUE,home>720?TRUE:FALSE);};
   draw(graph,p.alpha*opacity);
   SetDrawBright(255,255,255);Blend();
  }
@@ -131,11 +131,14 @@ struct Studio {
   DrawBox(0,306,W,360,C(220,227,182),TRUE);DrawBox(0,306,W,310,C(143,169,124),TRUE);
   }else if(backdrop==1)DrawBox(0,0,W,360,C(35,39,48),TRUE);
   else for(int y=0;y<360;y+=24)for(int x=0;x<W;x+=24){int shade=((x/24+y/24)%2)?175:215;DrawBox(x,y,x+24,y+24,C(shade,shade,shade),TRUE);}
-  if(Cinematic())Actor("frog",cinematic.enemyClip,cinematic.enemy,1120);
+  auto reaction=TargetReaction(lib,target,at,Cinematic()?ImpactTime(lib.cinematic):ImpactTime(Current()),Cinematic());
+  if(Cinematic()&&cinematic.ended)reaction={"idle",0};
+  if(Cinematic()||clip=="attack"||clip=="ult_charge"||clip=="ult_throw")Actor(target,reaction.clip,SamplePose(lib.actors.at(target).at(reaction.clip),reaction.local,lib.actors.at(target).at(reaction.clip).loop),1120);
+  else Actor(target,"idle",SamplePose(lib.actors.at(target).at("idle"),time,true),1120);
   Blend(dim);DrawBox(0,0,W,360,C(33,28,60),TRUE);Blend();
-  if(Cinematic())Actor("chick",cinematic.playerClip,cinematic.player,320);
+  if(Cinematic())Actor(actor,lib.actors.at(actor).count(cinematic.playerClip)?cinematic.playerClip:"idle",SamplePose(lib.actors.at(actor).at(lib.actors.at(actor).count(cinematic.playerClip)?cinematic.playerClip:"idle"),at-250,false),320);
   else{
-   auto pose=SamplePose(Current(),time,loop);const double home=actor=="frog"?1120:320;
+   auto pose=SamplePose(Current(),time,loop);const double home=320;
    if(onion){const auto neighbors=NeighborFrames(Current(),pose.frame,loop);auto ghost=pose;
     if(neighbors.previous!=pose.frame){ghost.frame=neighbors.previous;Actor(actor,clip,ghost,home,.35);}
     if(neighbors.next!=pose.frame){ghost.frame=neighbors.next;Actor(actor,clip,ghost,home,.20);}
@@ -155,7 +158,7 @@ struct Studio {
   if(guides){
    DrawLine(0,320,W,320,C(230,115,65));
    auto origin=[&](int x){DrawLine(x-14,320,x+14,320,C(255,80,140),2);DrawLine(x,306,x,334,C(255,80,140),2);};
-   if(Cinematic()){origin(320);origin(1120);}else origin(actor=="frog"?1120:320);
+   origin(320);origin(1120);
   }
   SetDrawScreen(DX_SCREEN_BACK);SetDrawArea(20,220,W-20,580);
   DrawRotaGraph3F(float(W/2+shake),400,W/2.f,180,zoom,zoom,0,stage,TRUE);SetDrawArea(0,0,W,H);
@@ -178,8 +181,9 @@ struct Studio {
  }
  void Draw(){
   ClearDrawScreen();DrawBox(0,0,W,H,C(250,248,239),TRUE);
-  Text(24,18,"UNDERGOD / ANIMATION STUDIO v1");Text(950,18,"A actor | Tab clip | R reload | O onion");
+  Text(24,18,"UNDERGOD / ANIMATION STUDIO v1");Text(750,18,"A primary | T target | X preview exchange | R reload");
   Button({24,58,150,36},"Chick [1]",actor=="chick");Button({184,58,150,36},"Frog [2]",actor=="frog");
+  Button({354,58,260,36},"Target [T]: "+target);Button({624,58,230,36},"Preview exchange [X]");
   auto names=Clips();for(size_t i=0;i<names.size();++i)Button({24+int(i%9)*155,110+int(i/9)*42,145,36},names[i],clip==names[i]);
   Text(24,176,Cinematic()?"Sao Roi / shared two-actor cinematic":actor+" / "+clip+(Current().composed?" / composed from existing frames":""));
   World();Timeline();Text(1000,672,onion?"Onion [O]: on":"Onion [O]: off");
@@ -224,6 +228,8 @@ struct Studio {
   if(press(KEY_INPUT_A)){
    auto next=lib.actors.find(actor);if(++next==lib.actors.end())next=lib.actors.begin();Select(next->first,clip);
   }
+  if(press(KEY_INPUT_T)||button({354,58,260,36})){auto next=lib.actors.find(target);if(++next==lib.actors.end())next=lib.actors.begin();target=next->first;time=0;}
+  if(press(KEY_INPUT_X)||button({624,58,230,36})){Select(actor,"attack");exchange=true;loop=false;}
   const auto names=Clips();
   if(press(KEY_INPUT_TAB)){auto i=std::find(names.begin(),names.end(),clip)-names.begin();Select(actor,names[(i+1)%names.size()]);}
   for(size_t i=0;i<names.size();++i)if(button({24+int(i%9)*155,110+int(i/9)*42,145,36}))Select(actor,names[i]);
@@ -283,7 +289,8 @@ int WINAPI WinMain(HINSTANCE,HINSTANCE,LPSTR args,int){
     int mx=int(static_cast<long long>(mouse.x)*W/std::max(1L,client.right)),my=int(static_cast<long long>(mouse.y)*H/std::max(1L,client.bottom));
     int buttons=GetMouseInput();app.Input(keys,previous,mx,my,(buttons&MOUSE_INPUT_LEFT)&&!(oldMouse&MOUSE_INPUT_LEFT),(buttons&MOUSE_INPUT_LEFT)!=0);oldMouse=buttons;
     std::copy(keys,keys+256,previous);
-    if(app.playing){app.time+=dt*1000*app.speed;if(!app.loop&&app.time>=app.Duration()){app.time=app.Duration();app.playing=false;}}
+    if(app.playing){app.time+=dt*1000*app.speed;if(app.exchange&&app.time>=ExchangeDuration(app.lib,app.actor,app.target,app.clip)){app.Select(app.actor,"idle");}
+    else if(!app.loop&&app.time>=app.Duration()&&!app.exchange){app.time=app.Duration();app.playing=false;}}
     if(app.noticeLeft>0){app.noticeLeft-=dt;if(app.noticeLeft<=0)app.notice.clear();}
     app.Draw();ScreenFlip();int wait=16-int((GetNowHiPerformanceCount()-start)/1000);if(wait>0)WaitTimer(wait);
    }

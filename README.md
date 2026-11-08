@@ -236,3 +236,11 @@ without applying gameplay damage.
    the 15 v1 clips, 44 unique character frames and four-frame naming/order;
    update those assertions and the smoke image count when deliberately extending
    the inventory. Adjust picker layout if adding more than 18 clips.
+
+Round 3 dual stage: A or 1/2 picks the primary on the left; T (or the target
+button) cycles the independent target on the right. X previews an attack exchange
+and returns both to idle. Attack, ult_charge and ult_throw trigger target hit at
+the first `impact` cue; absent a cue, contact defaults to the clip end. Sao Roi
+uses its cinematic impact step, then target hit and composed defeat when available.
+Actor facing follows stage side. The cinematic supports either picker, using idle
+when an actor lacks a requested pose.

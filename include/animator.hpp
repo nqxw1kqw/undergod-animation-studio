@@ -30,6 +30,12 @@ bool Reload(Library& current,std::string& error,const std::string& root=".");
 size_t NudgeCue(Clip&,size_t index,double delta);
 void EditFrameDuration(Clip&,size_t index,double delta);
 bool SaveClips(Library&,std::string& error,const std::string& root=".");
+// Missing impact cues default to the attacking clip's end.
+double ImpactTime(const Clip&);
+double ImpactTime(const undergod::Timeline&);
+struct Reaction {std::string clip="idle";double local=0;};
+Reaction TargetReaction(const Library&,const std::string& target,double time,double impact,bool defeat=false);
+double ExchangeDuration(const Library&,const std::string& primary,const std::string& target,const std::string& clip);
 struct FrameNeighbors {size_t previous=0,next=0;};
 FrameNeighbors NeighborFrames(const Clip&,size_t current,bool loop);
 Pose SamplePose(const Clip&,double ms,bool loop);

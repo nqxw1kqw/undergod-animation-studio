@@ -39,7 +39,7 @@ double Clip::Duration()const{double d=0;for(const auto& f:frames)d+=f.duration;r
 static Library ParseLibrary(const Json& j,const std::string& root){
     Require(j.at("version")==1,"Unsupported clips version");Library lib;
     const std::set<std::string> trackNames={"x","y","scale","rotation","r","g","b","alpha","desaturate"};
-    const std::set<std::string> cueNames={"shake","flash","particles","popup","dim","zoom"};
+    const std::set<std::string> cueNames={"shake","flash","particles","popup","dim","zoom","impact"};
     for(const auto& actor:j.at("actors").items()){
         Require(!actor.key().empty(),"Empty actor");
         for(const auto& entry:actor.value().items()){
@@ -131,6 +131,20 @@ bool SaveClips(Library& current,std::string& error,const std::string& root){
 }
 bool Reload(Library& current,std::string& error,const std::string& root){
     try{auto next=LoadLibrary(root);current=std::move(next);error.clear();return true;}catch(const std::exception& e){error=e.what();return false;}
+}
+double ImpactTime(const Clip& c){for(const auto& q:c.cues)if(q.action=="impact")return q.t;return c.Duration();}
+double ImpactTime(const undergod::Timeline& t){for(const auto& s:t.steps)if(s.cue==undergod::Cue::Impact)return s.t;return CinematicDuration(t);}
+Reaction TargetReaction(const Library& lib,const std::string& target,double time,double impact,bool defeat){
+    const auto& clips=lib.actors.at(target);double age=time-impact;
+    if(age<0||!clips.count("hit"))return {"idle",std::max(0.,time)};
+    const double hit=clips.at("hit").Duration();
+    if(age<hit)return {"hit",age};
+    if(defeat&&clips.count("defeat")&&clips.at("defeat").composed)return {"defeat",age-hit};
+    return {"idle",age-hit};
+}
+double ExchangeDuration(const Library& lib,const std::string& primary,const std::string& target,const std::string& clip){
+    const auto& c=lib.actors.at(primary).at(clip);const auto& t=lib.actors.at(target);
+    return std::max(c.Duration(),ImpactTime(c)+(t.count("hit")?t.at("hit").Duration():0));
 }
 FrameNeighbors NeighborFrames(const Clip& c,size_t current,bool loop){
     Require(current<c.frames.size(),"Invalid current frame");const size_t last=c.frames.size()-1;

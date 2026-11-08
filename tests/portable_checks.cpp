@@ -130,5 +130,14 @@ int main(){try{
   Check(bytes(tmp.path/"data/clips.json")==saved,"Failed save leaves bytes identical");
  }
  Result("timeline_invalid_save_preserves_file_bytes");
+ for(const auto& actor:lib.actors)for(const auto& entry:actor.second){const auto& c=entry.second;
+  for(bool loop:{false,true})for(size_t i=0;i<c.frames.size();++i){auto n=NeighborFrames(c,i,loop);
+   Check(n.previous==(i?i-1:(loop?c.frames.size()-1:0)),"Previous neighbor");
+   Check(n.next==(i+1<c.frames.size()?i+1:(loop?0:i)),"Next neighbor");
+  }
+ }
+ Clip single;single.frames={{"unused",20}};for(bool loop:{false,true}){auto n=NeighborFrames(single,0,loop);Check(n.previous==0&&n.next==0,"Single-frame neighbors");}
+ bool rejected=false;try{NeighborFrames(single,1,true);}catch(const std::exception&){rejected=true;}Check(rejected,"Invalid neighbor index rejected");
+ Result("onion_skin_loop_aware_frame_neighbors");
  return 0;
  }catch(const std::exception& e){std::cerr<<"RESULT portable FAIL: "<<e.what()<<'\n';return 1;}}

@@ -30,6 +30,8 @@ bool Reload(Library& current,std::string& error,const std::string& root=".");
 size_t NudgeCue(Clip&,size_t index,double delta);
 void EditFrameDuration(Clip&,size_t index,double delta);
 bool SaveClips(Library&,std::string& error,const std::string& root=".");
+struct FrameNeighbors {size_t previous=0,next=0;};
+FrameNeighbors NeighborFrames(const Clip&,size_t current,bool loop);
 Pose SamplePose(const Clip&,double ms,bool loop);
 Sample SampleInterval(const Clip&,double previous,double ms,bool loop);
 // A monotonic cursor makes repeated Advance calls idempotent. Seek deliberately

@@ -42,7 +42,7 @@ struct Images {
 struct Effects {bool shake=true,flash=true,particles=true,dim=true,reduced=false;};
 struct Studio {
  Library lib;Images images;int stage=-1,sprite=-1,font=-1;std::string actor="chick",clip="idle",notice;
- double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;bool playing=true,loop=true;Effects effects;
+ double time=0,speed=1,noticeLeft=0;size_t selectedRow=0;bool playing=true,loop=true,onion=false;Effects effects;
  ~Studio(){if(sprite>=0)DeleteGraph(sprite);if(stage>=0)DeleteGraph(stage);if(font>=0)DeleteFontToHandle(font);}
  bool Cinematic()const{return clip=="sao_roi";}
  const Clip& Current()const{return lib.actors.at(actor).at(clip);}
@@ -76,10 +76,10 @@ struct Studio {
   else{for(auto i=boundaries.rbegin();i!=boundaries.rend();++i)if(*i<at-.0001){target=*i;break;}}
   time=target;if(loop&&time==Duration())time=0;
  }
- void Actor(const std::string& who,const std::string& name,Pose p,double home){
+ void Actor(const std::string& who,const std::string& name,Pose p,double home,double opacity=1){
   if(effects.reduced){if(name=="victory")p.y=0;if(name=="ult_charge")p.scale=1;}
   const auto& c=lib.actors.at(who).at(name);const auto& file=c.frames.at(p.frame).file;
-  Blend(.15);DrawOval(int(home+p.x),324,who=="frog"?70:46,9,C(80,107,76),TRUE);Blend();
+  if(opacity==1){Blend(.15);DrawOval(int(home+p.x),324,who=="frog"?70:46,9,C(80,107,76),TRUE);Blend();}
   int graph=images.Get(file);
   if(p.desaturate>=1)graph=images.Get(file,true);
   else if(p.desaturate>0){
@@ -89,7 +89,7 @@ struct Studio {
   }
   SetDrawBright(int(p.r),int(p.g),int(p.b));
   auto draw=[&](int graph,double alpha){Blend(alpha);DrawRotaGraph3F(float(home+p.x),float(320+p.y),256,456,p.scale*.5,p.scale*.5,p.rotation,graph,TRUE,who=="frog"?TRUE:FALSE);};
-  draw(graph,p.alpha);
+  draw(graph,p.alpha*opacity);
   SetDrawBright(255,255,255);Blend();
  }
  void Particles(double x,double age,double life,int count,bool dust){
@@ -131,7 +131,14 @@ struct Studio {
   if(Cinematic())Actor("frog",cinematic.enemyClip,cinematic.enemy,1120);
   Blend(dim);DrawBox(0,0,W,360,C(33,28,60),TRUE);Blend();
   if(Cinematic())Actor("chick",cinematic.playerClip,cinematic.player,320);
-  else Actor(actor,clip,SamplePose(Current(),time,loop),actor=="chick"?320:1120);
+  else{
+   auto pose=SamplePose(Current(),time,loop);const double home=actor=="frog"?1120:320;
+   if(onion){const auto neighbors=NeighborFrames(Current(),pose.frame,loop);auto ghost=pose;
+    if(neighbors.previous!=pose.frame){ghost.frame=neighbors.previous;Actor(actor,clip,ghost,home,.35);}
+    if(neighbors.next!=pose.frame){ghost.frame=neighbors.next;Actor(actor,clip,ghost,home,.20);}
+   }
+   Actor(actor,clip,pose,home);
+  }
   if(Cinematic()){
    if(cinematic.spearVisible)DrawRotaGraph3F(float(cinematic.spearX),float(cinematic.spearY),256,56,.45,.45,cinematic.falling?3.141592653589793:0,images.Get("assets/pastel/vfx/spear.png"),TRUE);
    if(cinematic.vfxAge>=0&&cinematic.vfxAge<cinematic.vfxFrames*125){int f=std::min(cinematic.vfxFrames-1,int(cinematic.vfxAge/125));DrawRectRotaGraph3F(cinematic.vfxEnemy?1120.f:320.f,195,(f%2)*256,(f/2)*256,256,256,128,128,1,1,0,images.Get("assets/pastel/vfx/spear_impact.png"),TRUE);}
@@ -163,11 +170,11 @@ struct Studio {
  }
  void Draw(){
   ClearDrawScreen();DrawBox(0,0,W,H,C(250,248,239),TRUE);
-  Text(24,18,"UNDERGOD / ANIMATION STUDIO v1");Text(950,18,"A actor  |  Tab clip  |  R reload");
+  Text(24,18,"UNDERGOD / ANIMATION STUDIO v1");Text(950,18,"A actor | Tab clip | R reload | O onion");
   Button({24,58,150,36},"Chick [1]",actor=="chick");Button({184,58,150,36},"Frog [2]",actor=="frog");
   auto names=Clips();for(size_t i=0;i<names.size();++i)Button({24+int(i%9)*155,110+int(i/9)*42,145,36},names[i],clip==names[i]);
   Text(24,176,Cinematic()?"Sao Roi / shared two-actor cinematic":actor+" / "+clip+(Current().composed?" / composed from existing frames":""));
-  World();Timeline();
+  World();Timeline();Text(1000,672,onion?"Onion [O]: on":"Onion [O]: off");
   Button({24,612,150,36},playing?"Pause [Space]":"Play [Space]",playing);
   Button({184,612,160,36},"Restart [Home]");Button({354,612,150,36},"Loop [L]",loop);
   Button({514,612,100,36},"- [PgDn]");Button({624,612,100,36},"+ [PgUp]");Text(740,621,Fixed(speed)+"x");
@@ -236,6 +243,7 @@ struct Studio {
   if(press(KEY_INPUT_D)||button({554,664,150,36}))effects.dim=!effects.dim;
   if(press(KEY_INPUT_E)||button({714,664,245,36}))effects.reduced=!effects.reduced;
   if(held&&Rect{48,725,W-96,40}.Has(mx,my)){playing=false;time=Duration()*std::clamp(double(mx-48)/(W-96),0.,1.);if(loop&&time==Duration())time-=.001;}
+  if(press(KEY_INPUT_O))onion=!onion;
   if(press(KEY_INPUT_R))Reload();
  }
  int Smoke(){

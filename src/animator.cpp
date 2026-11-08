@@ -132,6 +132,10 @@ bool SaveClips(Library& current,std::string& error,const std::string& root){
 bool Reload(Library& current,std::string& error,const std::string& root){
     try{auto next=LoadLibrary(root);current=std::move(next);error.clear();return true;}catch(const std::exception& e){error=e.what();return false;}
 }
+FrameNeighbors NeighborFrames(const Clip& c,size_t current,bool loop){
+    Require(current<c.frames.size(),"Invalid current frame");const size_t last=c.frames.size()-1;
+    return {current>0?current-1:(loop?last:0),current<last?current+1:(loop?0:last)};
+}
 Pose SamplePose(const Clip& c,double ms,bool loop){
     Require(std::isfinite(ms),"Invalid sample time");const double duration=c.Duration();Require(duration>0,"Empty clip");
     double t=std::max(0.,ms);t=loop?std::fmod(t,duration):std::min(t,duration);

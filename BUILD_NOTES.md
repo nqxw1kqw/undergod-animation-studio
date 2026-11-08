@@ -20,6 +20,7 @@ RESULT transactional_reload_invalid_json_and_validation PASS
 RESULT timeline_nudge_clamp_resort_duration_edits PASS
 RESULT timeline_save_reload_roundtrip_equality PASS
 RESULT timeline_invalid_save_preserves_file_bytes PASS
+RESULT onion_skin_loop_aware_frame_neighbors PASS
 ```
 
 These cover all 15 delivered clips, the 44 unique character paths and index order,
@@ -74,6 +75,10 @@ and MoveFileExW on Windows; the Windows replacement path is only statically
 checked here. Interactive row selection/scrolling, punctuation/Shift/Ctrl input,
 error notices, runtime write permissions and Windows file replacement still need
 Windows verification. No actual DxLib build or interactive test was performed.
+
+Onion neighbor tests cover every delivered frame with and without looping, both
+endpoints, a single-frame clip and invalid indices. Onion rendering order, alpha,
+pivot alignment, mirroring and O input remain statically verified only.
 
 ## Reuse and provenance
 

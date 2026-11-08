@@ -85,6 +85,7 @@ Buttons provide the same actions as the keyboard. The stage uses the game's
 | [ / ] | Nudge selected cue −/+10 ms; Shift uses 50 ms |
 | , / . | Shorten / lengthen selected frame by 10 ms (minimum 20 ms) |
 | Ctrl+S | Validate and save all edited clips to runtime data/clips.json |
+| O | Toggle onion skin for the selected clip (previous 35%, next 20%, beneath current frame) |
 | Esc | Exit |
 
 Cinematic arrow stepping uses 125 ms increments, matching the game's 8 fps impact
@@ -102,6 +103,10 @@ A successful reload displays a three-second notice. Parse, validation or image
 loading errors keep the entire previous library and image cache and display a
 persistent error until the next reload. Initial startup without valid data shows
 an error dialog and exits. Reload never writes JSON.
+
+Onion skin uses the current pose and actor pivot for neighboring sprites. Neighbors
+wrap when transport looping is on; nonlooping endpoints omit the absent neighbor.
+It is disabled for the shared cinematic.
 
 ## In-app clip editing
 

@@ -201,3 +201,16 @@ All 29 portable groups pass. App source passes MinGW C++17 warning-enabled synta
 checking with temporary hand-declared DxLib stubs outside the repository. This
 checks C++ syntax, not real SDK declarations, key values, Windows rendering or
 interactive input. No Windows build, runtime test or smoke capture was performed.
+
+## MinGW build verified (2026-11-08)
+
+The DxLib app now also builds WITHOUT Visual Studio: `build_mingw.sh` compiles
+the unmodified app sources with MinGW-w64 g++ 13 against the official DxLib
+3.25a GCC edition (folder `13_1_0_x86_64_w64`). The resulting
+`UndergodAnimationStudio.exe` was executed under Wine 9.0 and the complete
+studio UI rendered correctly — stage with both actors, timeline panel,
+transport controls, and the round-6 header/help line ("Active actor: chick |
+1/2 switch actor | F1 idle ... | C sao_roi"). Hotkey behavior itself is
+covered by the portable RESULT groups; synthetic key injection into Wine did
+not reach DxLib's input polling, so live key presses were not machine-tested.
+The Visual Studio build in build.ps1 remains the canonical Windows route.

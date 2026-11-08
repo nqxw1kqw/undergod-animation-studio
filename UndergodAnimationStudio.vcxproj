@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals"><ProjectGuid>{7DFB2A03-E26C-48C3-9E74-14611936D782}</ProjectGuid><RootNamespace>UndergodAnimationStudio</RootNamespace><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration"><ConfigurationType>Application</ConfigurationType><PlatformToolset>v143</PlatformToolset><CharacterSet>MultiByte</CharacterSet><UseDebugLibraries Condition="'$(Configuration)'=='Debug'">true</UseDebugLibraries><UseDebugLibraries Condition="'$(Configuration)'!='Debug'">false</UseDebugLibraries></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup><OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir><IntDir>$(ProjectDir)obj\UndergodAnimationStudio\$(Configuration)\</IntDir><TargetName>UndergodAnimationStudio</TargetName><DxLibDir Condition="'$(DxLibDir)'==''">C:\DxLib</DxLibDir><LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory></PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><WarningLevel>Level3</WarningLevel><LanguageStandard>stdcpp17</LanguageStandard><ConformanceMode>true</ConformanceMode><AdditionalIncludeDirectories>$(ProjectDir)include;$(DxLibDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><PreprocessorDefinitions>NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalOptions>/utf-8 /wd4828 %(AdditionalOptions)</AdditionalOptions><DebugInformationFormat>OldStyle</DebugInformationFormat><RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebug</RuntimeLibrary><RuntimeLibrary Condition="'$(Configuration)'!='Debug'">MultiThreaded</RuntimeLibrary><Optimization Condition="'$(Configuration)'=='Debug'">Disabled</Optimization><Optimization Condition="'$(Configuration)'!='Debug'">MaxSpeed</Optimization></ClCompile>
+    <Link><SubSystem>Windows</SubSystem><AdditionalLibraryDirectories>$(DxLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories><GenerateDebugInformation>true</GenerateDebugInformation></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="src\main.cpp" /><ClCompile Include="src\animator.cpp" /><ClCompile Include="src\cinematic_data.cpp" /></ItemGroup>
+  <ItemGroup><ClInclude Include="include\animator.hpp" /><ClInclude Include="include\quest_timeline.hpp" /></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyAssets" AfterTargets="Build"><ItemGroup><RuntimeAssets Include="$(ProjectDir)assets\pastel\**\*.png" /><RuntimeData Include="$(ProjectDir)data\*.json" /></ItemGroup><Copy SourceFiles="@(RuntimeAssets)" DestinationFiles="@(RuntimeAssets->'$(OutDir)assets\pastel\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" /><Copy SourceFiles="@(RuntimeData)" DestinationFolder="$(OutDir)data" SkipUnchangedFiles="true" /></Target>
+</Project>

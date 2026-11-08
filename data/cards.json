@@ -1,0 +1,6 @@
+[
+ {"id":"punch","name":"Chọc Giáo","cost":1,"damage":6,"description":"Gây 6 sát thương.","copies":5},
+ {"id":"shield","name":"Khiên Gỗ","cost":1,"block":5,"description":"Nhận 5 giáp.","copies":3},
+ {"id":"heavy","name":"Đâm Mạnh","cost":2,"damage":12,"description":"Gây 12 sát thương.","copies":1},
+ {"id":"cookie","name":"Bánh Quy","cost":2,"heal":8,"description":"Hồi 8 HP.","copies":1}
+]

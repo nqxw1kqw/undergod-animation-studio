@@ -1,0 +1,1 @@
+[{"id":"frog","name":"Ếch Vương","maxHp":120,"attackChance":0.7,"minDamage":8,"maxDamage":13,"block":6,"openingAttack":true,"maxConsecutiveGuards":1,"stageThresholdPercent":60,"gentleReduction":2,"gentleCharge":14,"challengeCharge":34}]

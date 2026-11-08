@@ -1,4 +1,5 @@
 #include "animator.hpp"
+#include "export.hpp"
 #include "../third_party/nlohmann/json.hpp"
 #include <cmath>
 #include <filesystem>
@@ -168,5 +169,49 @@ int main(){try{
  transport=0;Check(AdvanceTransport(transport,2000,650,true)&&transport==2000,"Loop retains cycle time");
  Check(NextSpeed(1)==1.25&&NextSpeed(3)==3&&NextSpeed(.25)==.5,"Shuttle speed steps and cap");
  Result("transport_once_freeze_loop_and_shuttle");
+ // Export each delivered clip, including looped clips as one clamped pass.
+ for(const auto& actor:lib.actors)for(const auto& entry:actor.second){
+  const auto& c=entry.second;auto path=tmp.path/"trace.json";ExportTrace(c,path.string());
+  Json trace;{std::ifstream f(path);f>>trace;}double previous=-1,expectedTime=0;
+  Check(trace["samples"].size()==c.frames.size()+1,"All frame boundaries plus end");
+  size_t sampleIndex=0;
+  for(const auto& row:trace["samples"]){double t=row["time_ms"];Check(t>previous&&Near(t,expectedTime),"Monotonic exact frame boundaries");
+   const auto expected=SampleInterval(c,previous,t,false);const auto& v=row["pose"];
+   Pose actual;actual.frame=row["frame_index"];actual.x=v["x"];actual.y=v["y"];actual.scale=v["scale"];actual.rotation=v["rotation"];actual.r=v["r"];actual.g=v["g"];actual.b=v["b"];actual.alpha=v["alpha"];actual.desaturate=v["desaturate"];
+   Check(Same(actual,expected.pose)&&row["frame_file"]==c.frames[actual.frame].file,"Trace equals playback sampler");
+   Check(row["cues"].size()==expected.fired.size(),"Trace cue interval count");
+   for(size_t i=0;i<expected.fired.size();++i)Check(row["cues"][i]["index"]==expected.fired[i].index&&row["cues"][i]["time_ms"]==expected.fired[i].at,"Trace cue identities");
+   previous=t;if(sampleIndex<c.frames.size())expectedTime+=c.frames[sampleIndex++].duration;
+  }
+ }
+ Result("export_trace_boundaries_sampler_and_cues");
+ Clip sheetClip;sheetClip.id="test";sheetClip.frames={{"0",20},{"1",30},{"2",40},{"3",50}};
+ auto decode=[](const std::string& file){ExportImage image;image.width=3;image.height=2;for(int y=0;y<2;++y)for(int x=0;x<3;++x){image.rgba.insert(image.rgba.end(),{static_cast<unsigned char>(10+std::stoi(file)),static_cast<unsigned char>(y),static_cast<unsigned char>(x),123});}return image;};
+ for(bool strip:{false,true}){
+  auto bmp=tmp.path/"sheet.bmp",sidecar=tmp.path/"sheet.json";
+  ExportContactSheet(sheetClip,decode,bmp.string(),sidecar.string(),strip);
+  std::ifstream f(bmp,std::ios::binary);std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(f)),{});
+  auto le=[&](size_t at){return unsigned(bytes.at(at))|(unsigned(bytes.at(at+1))<<8)|(unsigned(bytes.at(at+2))<<16)|(unsigned(bytes.at(at+3))<<24);};
+  const unsigned w=strip?3:6,h=strip?8:4;
+  Check(bytes[0]=='B'&&bytes[1]=='M'&&le(2)==bytes.size()&&le(10)==122&&le(14)==108,"BMP V4 header");
+  Check(le(18)==w&&le(22)==h&&bytes[26]==1&&bytes[28]==32&&le(30)==3&&le(34)==w*h*4&&bytes.size()==122+w*h*4,"BMP dimensions and byte size");
+  Check(le(54)==0xff0000&&le(66)==0xff000000,"BMP RGBA masks");
+  Json meta;{std::ifstream in(sidecar);in>>meta;}Check(meta["clip_id"]=="test"&&meta["frame_count"]==4&&meta["cell_size"]["width"]==3&&meta["cell_size"]["height"]==2,"Sidecar identity and cell size");
+  Check(meta["grid"]["columns"]==(strip?1:2)&&meta["grid"]["rows"]==(strip?4:2),"Sidecar grid");
+  std::vector<int> covered(w*h,0);
+  for(size_t i=0;i<4;++i){auto rect=meta["frames"][i]["rect"];unsigned rx=rect["x"],ry=rect["y"];
+   Check(rect["width"]==3&&rect["height"]==2&&meta["frames"][i]["duration_ms"]==sheetClip.frames[i].duration,"Frame metadata");
+   for(unsigned y=0;y<2;++y)for(unsigned x=0;x<3;++x){Check(rx+x<w&&ry+y<h,"Rect inside sheet");++covered[(ry+y)*w+rx+x];size_t at=122+((h-1-(ry+y))*w+rx+x)*4;
+    Check(bytes[at]==x&&bytes[at+1]==y&&bytes[at+2]==10+i&&bytes[at+3]==123,"Ordered source pixels, orientation and alpha");}
+  }
+  for(int n:covered)Check(n==1,"Rects tile sheet exactly once");
+ }
+ Result("export_contact_sheet_bmp_header_pixels_and_rects");
+ // A partial last row remains transparent; mismatched images and I/O fail visibly.
+ sheetClip.frames.pop_back();ExportContactSheet(sheetClip,decode,(tmp.path/"partial.bmp").string(),(tmp.path/"partial.json").string());
+ {std::ifstream f(tmp.path/"partial.bmp",std::ios::binary);f.seekg(122+3*4);char pixel[4];f.read(pixel,4);Check(pixel[0]==0&&pixel[1]==0&&pixel[2]==0&&pixel[3]==0,"Unused cell transparent");}
+ bool failed=false;try{ExportContactSheet(sheetClip,[](const std::string&){return ExportImage{};},(tmp.path/"bad.bmp").string(),(tmp.path/"bad.json").string());}catch(const std::exception&){failed=true;}Check(failed,"Invalid dimensions rejected");
+ failed=false;try{ExportTrace(sheetClip,(tmp.path/"missing"/"trace.json").string());}catch(const std::exception&){failed=true;}Check(failed,"Write failure reported");
+ Result("export_partial_grid_and_errors");
  return 0;
  }catch(const std::exception& e){std::cerr<<"RESULT portable FAIL: "<<e.what()<<'\n';return 1;}}

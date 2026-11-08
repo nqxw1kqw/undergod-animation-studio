@@ -254,3 +254,26 @@ when an actor lacks a requested pose.
 The scrubber marks contact in red (the documented end fallback when no impact cue
 is present). P once mode holds the final frame and stops; Space restarts a
 finished clip, while J resets and pauses. L increases speed by 0.25× and resumes.
+
+## Portable exports
+
+`include/export.hpp` exposes `ExportTrace(clip, path)` and
+`ExportContactSheet(clip, decoder, bmpPath, jsonPath, onePerRow=false)`.
+Callers choose output paths and create their parent folders. The decoder supplies
+top-down RGBA8 source pixels, all with the same positive dimensions; the engine
+has no image-decoder or DxLib dependency. Sheet export uses original frames,
+without transform tracks, tint or effects. It lays frames in row-major order in
+fixed source-size cells, with ceil(sqrt(frame count)) columns by default, or one
+column for tall strips. Unused cells in the final row are transparent.
+
+Trace JSON contains actor/clip identity and samples at zero, every frame start,
+and the final clip boundary, for one nonlooping pass even for looping clips.
+Each sample records milliseconds, zero-based frame index, source file, all nine
+interpolated pose values and cues fired since the previous sample (including
+zero-time cues). Sampling uses playback's `SampleInterval`; terminal samples
+hold the final frame. Cues include index, cycle, firing time and payload.
+
+Sheets are uncompressed 32-bit BGRA BMPs with a BITMAPV4HEADER, explicit alpha
+mask and sRGB color space. The JSON sidecar gives clip/actor identity, frame
+count, cell and sheet sizes, grid rows/columns, and each source frame's top-left
+pixel rectangle and duration in milliseconds. All artifacts use format version 1.

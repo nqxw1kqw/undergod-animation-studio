@@ -141,3 +141,14 @@ interaction remain Windows-only. The current source passes a MinGW C++17 syntax
 check with temporary hand-declared DxLib stubs (including new key constants);
 this does not validate actual SDK signatures or key definitions. The portable
 engine remains DxLib-free. No Windows build, rendering or smoke run was performed.
+
+Round 4 A: portable exports add RESULT groups
+`export_trace_boundaries_sampler_and_cues`,
+`export_contact_sheet_bmp_header_pixels_and_rects`, and
+`export_partial_grid_and_errors`. Every delivered clip's trace is compared with
+SampleInterval at all frame starts and the terminal boundary, including cue
+identities. Synthetic RGBA frames test both square grids and tall strips,
+V4 BMP fields/size, channel order, orientation, alpha, exact rectangle coverage,
+unused transparent cells and error reporting. PNG decoding is a caller-supplied
+adapter; composition and BMP/JSON writing are entirely portable without new
+third-party dependencies. No Windows or DxLib code enters the export engine.
